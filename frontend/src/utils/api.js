@@ -39,4 +39,32 @@ export const matchAPI = {
   update: (id, data) => API.put(`/matches/${id}`, data),
 };
 
+// ─────────────────────────────────────────────────────────────────────
+// ADD ONLY THIS BLOCK at the bottom of your existing frontend/src/utils/api.js
+// Do NOT touch any existing code above it
+// ─────────────────────────────────────────────────────────────────────
+
+export const fixtureAPI = {
+  // Generate Double Round Robin fixtures for a tournament (admin)
+  generate: (tournamentId, data) =>
+    API.post(`/fixtures/generate/${tournamentId}`, data),
+
+  // Get all DRR fixtures for a tournament (public)
+  getByTournament: (tournamentId) =>
+    API.get(`/fixtures/tournament/${tournamentId}`),
+
+  // Edit a fixture — date, time, venue, status, scores (admin)
+  update: (id, data) =>
+    API.put(`/fixtures/${id}`, data),
+
+  // Delete a single fixture (admin)
+  delete: (id) =>
+    API.delete(`/fixtures/${id}`),
+
+  // Clear all DRR fixtures for a tournament (admin)
+  clearAll: (tournamentId) =>
+    API.delete(`/fixtures/tournament/${tournamentId}`),
+};
+
+
 export default API;
