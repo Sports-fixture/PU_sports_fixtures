@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Users, UserPlus, Trash2, Zap, Hash, Star } from 'lucide-react';
 import { calculateCapacity } from '../../utils/pyramidLogic';
-import { pyramidAPI } from '../../utils/api';
+import { pyramidAPI, teamAPI } from '../../utils/api';
 
-export default function SetupScreen({ tournamentId, refreshData }) {
+export default function SetupScreen({ tournamentId, refreshData, onComplete }) {
   const [targetRows, setTargetRows] = useState(4);
   const [setupPlayers, setSetupPlayers] = useState([]);
   const [playerName, setPlayerName] = useState('');
@@ -56,11 +56,48 @@ export default function SetupScreen({ tournamentId, refreshData }) {
     setSetupPlayers(setupPlayers.filter((p) => p.playerId !== playerId));
   };
 
+  const handleImportTeams = async () => {
+    try {
+      const { data } = await teamAPI.getByTournament(tournamentId);
+      const approvedTeams = data.filter(t => t.status === 'approved');
+      
+      if (approvedTeams.length === 0) {
+        setError('No approved teams found in this tournament.');
+        return;
+      }
+
+      const importedPlayers = approvedTeams.map((team) => ({
+        playerId: team._id,
+        name: team.teamName,
+        score: team.points || 0,
+      }));
+
+      // Automatically adjust target rows to fit these teams
+      let rows = 2;
+      while (calculateCapacity(rows) < importedPlayers.length && rows < 10) {
+        rows++;
+      }
+      setTargetRows(rows);
+      
+      // If we imported more than the exact capacity, slice it so it doesn't break the UI
+      const cap = calculateCapacity(rows);
+      setSetupPlayers(importedPlayers.slice(0, cap));
+      setError('');
+    } catch (err) {
+      console.error(err);
+      setError('Failed to fetch teams. Make sure they are approved in the dashboard.');
+    }
+  };
+
   const handleGenerate = async () => {
     if (canGenerate) {
+      if (!window.confirm('Generate pyramid fixture? Existing matches will be deleted.')) {
+        return;
+      }
       try {
         await pyramidAPI.generateBoard(tournamentId, { setupPlayers });
-        refreshData();
+        refreshData && refreshData();
+        if (onComplete) onComplete();
       } catch (err) {
         console.error(err);
         setError('Failed to generate board.');
@@ -101,10 +138,15 @@ export default function SetupScreen({ tournamentId, refreshData }) {
       </div>
 
       <div className="setup-section">
-        <label className="setup-label">
-          <UserPlus size={16} />
-          Add Player
-        </label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <label className="setup-label" style={{ marginBottom: 0 }}>
+            <UserPlus size={16} />
+            Add Player / Team
+          </label>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={handleImportTeams} style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '8px', cursor: 'pointer' }}>
+            📥 Import Registered Teams
+          </button>
+        </div>
         <form onSubmit={handleAddPlayer} className="add-player-form">
           <input
             id="player-name-input"

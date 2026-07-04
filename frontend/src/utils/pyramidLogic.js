@@ -20,7 +20,7 @@ export const isValidChallenge = (challengerRank, defenderRank) => {
   const challengerTier = getTier(challengerRank);
   const defenderTier = getTier(defenderRank);
 
-  return defenderTier === challengerTier || defenderTier === challengerTier - 1;
+  return defenderTier >= challengerTier - 2 && defenderTier <= challengerTier;
 };
 
 export const canChallenge = (challenger, defender) => {
@@ -39,7 +39,7 @@ export const canChallenge = (challenger, defender) => {
   if (!isValidChallenge(challenger.currentRank, defender.currentRank)) {
     return {
       valid: false,
-      reason: 'Invalid challenge: you can only target someone in your tier or exactly one tier above.',
+      reason: 'Invalid challenge: you can only target someone in your tier or up to 2 tiers above.',
     };
   }
   return { valid: true, reason: null };
