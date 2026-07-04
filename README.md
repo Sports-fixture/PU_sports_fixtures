@@ -215,4 +215,4 @@ Supported sport types: `cricket`, `football`, `basketball`, `badminton`, `tennis
 4. **Admin** sets team points for seeding (based on past performance)
 5. **Admin** clicks "Generate Fixture" → Double Knockout bracket created automatically
 6. **Admin** updates scores match by match → winners advance, losers drop to LB
-7. **Everyone** can view live bracket, scores, and standings on the public site
+7. **Everyone** can view live bracket, scores, and standings on the public site.

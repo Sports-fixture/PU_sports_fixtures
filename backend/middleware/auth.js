@@ -17,6 +17,7 @@ const auth = async (req, res, next) => {
 
 const adminAuth = async (req, res, next) => {
   await auth(req, res, () => {
+    console.log("adminAuth check - User:", req.user?.username, "Role:", req.user?.role, "Type:", typeof req.user?.role);
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
