@@ -8,6 +8,7 @@ import TournamentDetail from './pages/TournamentDetail';
 import { Login, Register } from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
 import MyTeams from './pages/MyTeams';
+import PyramidAdmin from './pages/PyramidAdmin';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ const AppRoutes = () => (
       <Route path="/register" element={<Register />} />
       <Route path="/my-teams" element={<ProtectedRoute><MyTeams /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/tournaments/:id/pyramid" element={<ProtectedRoute adminOnly><PyramidAdmin /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   </>

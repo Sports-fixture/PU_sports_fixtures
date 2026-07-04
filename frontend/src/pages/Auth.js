@@ -104,7 +104,7 @@ export const Login = () => {
 };
 
 export const Register = () => {
-  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '', adminCode: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -116,7 +116,7 @@ export const Register = () => {
     if (form.password.length < 6) return setError('Password must be at least 6 characters');
     setLoading(true);
     try {
-      const res = await authAPI.register({ username: form.username, email: form.email, password: form.password });
+      const res = await authAPI.register({ username: form.username, email: form.email, password: form.password, adminCode: form.adminCode });
       login(res.data.token, res.data.user);
       navigate('/tournaments');
     } catch (err) { setError(err.response?.data?.message || 'Registration failed'); }
@@ -165,6 +165,10 @@ export const Register = () => {
               <div className="form-group">
                 <label className="form-label">Confirm Password</label>
                 <input className="form-input" type="password" placeholder="Re-enter password" value={form.confirmPassword} onChange={e => setForm({...form, confirmPassword: e.target.value})} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Admin Code (Optional)</label>
+                <input className="form-input" type="text" placeholder="Leave blank for regular user" value={form.adminCode} onChange={e => setForm({...form, adminCode: e.target.value})} />
               </div>
               <button type="submit" className="btn btn-primary btn-lg" style={{width:'100%',marginTop:8}} disabled={loading}>
                 {loading ? 'Creating account...' : 'Create Account'}

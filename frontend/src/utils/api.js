@@ -39,4 +39,11 @@ export const matchAPI = {
   update: (id, data) => API.put(`/matches/${id}`, data),
 };
 
+export const pyramidAPI = {
+  getStandings: (tournamentId) => API.get(`/pyramid/standings/${tournamentId}`),
+  generateBoard: (tournamentId, data) => API.post(`/pyramid/generate/${tournamentId}`, data),
+  issueChallenge: (data) => API.post('/pyramid/challenge', data),
+  resolveChallenge: (id, data) => API.put(`/pyramid/challenge/${id}/resolve`, data),
+};
+
 export default API;
