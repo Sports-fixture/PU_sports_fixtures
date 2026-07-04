@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { tournamentAPI, teamAPI, matchAPI } from '../utils/api';
+import { tournamentAPI, teamAPI, matchAPI, pyramidAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { getTier } from '../utils/pyramidLogic';
 
 const sportEmoji = { cricket:'🏏', football:'⚽', basketball:'🏀', badminton:'🏸', tennis:'🎾', volleyball:'🏐', other:'🏅' };
 
@@ -332,6 +333,7 @@ const TournamentDetail = () => {
   const [tournament, setTournament] = useState(null);
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
+  const [pyramidStandings, setPyramidStandings] = useState([]);
   const [showRegModal, setShowRegModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -340,11 +342,23 @@ const TournamentDetail = () => {
   const [regSuccess, setRegSuccess] = useState('');
   const [regLoading, setRegLoading] = useState(false);
 
+  const [challengeModalData, setChallengeModalData] = useState(null);
+  const [challengeForm, setChallengeForm] = useState({ defenderId: '', date: '', venue: '' });
+  const [challengeError, setChallengeError] = useState('');
+  const [pendingChallenges, setPendingChallenges] = useState([]);
+
   const fetchData = useCallback(async () => {
     try {
       const [t, tm, m] = await Promise.all([tournamentAPI.getOne(id), teamAPI.getByTournament(id), matchAPI.getByTournament(id)]);
       setTournament(t.data); setTeams(tm.data); setMatches(m.data);
-    } catch {}
+      if (t.data.format === 'pyramid') {
+        const pRes = await pyramidAPI.getStandings(id);
+        setPyramidStandings(pRes.data.pyramidStandings || []);
+        setPendingChallenges(pRes.data.pendingChallenges || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setLoading(false);
   }, [id]);
 
@@ -362,6 +376,37 @@ const TournamentDetail = () => {
       setTeams(tm.data);
     } catch (err) { setRegError(err.response?.data?.message || 'Registration failed'); }
     setRegLoading(false);
+  };
+
+  const handleIssueChallenge = async (e) => {
+    e.preventDefault();
+    setChallengeError('');
+    if (!challengeForm.defenderId) return setChallengeError('Please select an opponent.');
+    
+    try {
+      await pyramidAPI.issueChallenge({
+        tournamentId: id,
+        challengerId: challengeModalData.challenger.id,
+        defenderId: challengeForm.defenderId,
+        date: challengeForm.date,
+        venue: challengeForm.venue
+      });
+      alert('Challenge issued successfully!');
+      setChallengeModalData(null);
+      fetchData(); // Refresh ladder to show players "in_match"
+    } catch (err) {
+      setChallengeError(err.response?.data?.error || 'Failed to issue challenge');
+    }
+  };
+
+  const handleResolveChallenge = async (challengeId, status) => {
+    if (!window.confirm(`Are you sure you want to mark ${status === 'CHALLENGER_WON' ? 'the Challenger' : 'the Defender'} as the winner?`)) return;
+    try {
+      await pyramidAPI.resolveChallenge(challengeId, { status });
+      fetchData();
+    } catch (err) {
+      alert('Failed to resolve challenge');
+    }
   };
 
   if (loading) return <div className="page-container"><div className="spinner"/></div>;
@@ -400,7 +445,7 @@ const TournamentDetail = () => {
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <span className="badge badge-gold">{tournament.sport?.toUpperCase()}</span>
                 {statusBadge(tournament.status)}
-                <span className="badge badge-blue">🔄 Double Knockout</span>
+                {tournament.format === 'pyramid' ? <span className="badge badge-blue">📐 Pyramid Ladder</span> : <span className="badge badge-blue">🔄 Double Knockout</span>}
                 {liveMatches.length>0&&<span className="badge badge-live">🔴 {liveMatches.length} Live</span>}
               </div>
             </div>
@@ -536,7 +581,82 @@ const TournamentDetail = () => {
       {/* FIXTURES TAB */}
       {activeTab==='fixtures'&&(
         <div className="fade-in">
-          {matches.length===0?(
+          {tournament.format === 'pyramid' ? (
+            <>
+            <div className="card">
+              <h3 style={{fontSize:'1.1rem',fontWeight:700,color:'var(--navy)',marginBottom:20}}>📐 Pyramid Ladder</h3>
+              {pyramidStandings.length === 0 ? (
+                <div className="empty-state"><div className="empty-title">Ladder not generated yet</div></div>
+              ) : (
+                <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
+                  {pyramidStandings.map((player, idx) => {
+                    const currentTier = getTier(player.rank);
+                    const nextTier = idx < pyramidStandings.length - 1 ? getTier(pyramidStandings[idx+1].rank) : currentTier;
+                    const isNewTier = currentTier !== nextTier;
+                    return (
+                      <React.Fragment key={player.id}>
+                        <div style={{
+                          display:'flex', alignItems:'center', padding:'12px 16px', background: player.rank===1?'var(--gold-light)':'var(--bg-secondary)',
+                          borderLeft: player.rank===1?'4px solid var(--gold)':'4px solid transparent', borderRadius: 8, marginBottom: isNewTier ? 0 : 8
+                        }}>
+                          <div style={{width:40, fontWeight:700, color: player.rank===1?'var(--gold-dark)':'var(--text-muted)'}}>#{player.rank}</div>
+                          <div style={{flex:1, fontWeight:600, color:player.rank===1?'var(--gold-dark)':'var(--text-primary)'}}>{player.name}</div>
+                          <div style={{fontWeight:700, color: player.rank===1?'var(--gold-dark)':'var(--royal)'}}>{player.score} pts</div>
+                          {user && player.status === 'available' && (
+                            <button className="btn btn-secondary btn-sm" style={{marginLeft: 10}} onClick={() => {
+                              const challengerTier = getTier(player.rank);
+                              const targets = pyramidStandings.filter(p => {
+                                if (p.rank >= player.rank || p.status !== 'available') return false;
+                                const pTier = getTier(p.rank);
+                                return pTier >= challengerTier - 2 && pTier <= challengerTier;
+                              });
+                              setChallengeModalData({ challenger: player, targets });
+                              setChallengeForm({ defenderId: '', date: '', venue: '' });
+                            }}>⚔️ Challenge</button>
+                          )}
+                          {player.status === 'in_match' && (
+                            <span className="badge badge-orange" style={{marginLeft: 10}}>In Match</span>
+                          )}
+                        </div>
+                        {isNewTier && (
+                          <div style={{height: 2, background: '#111', margin: '8px 0', opacity: 0.2, position: 'relative'}}>
+                            <div style={{position:'absolute', right:0, top:-8, background:'var(--bg-card)', padding:'0 8px', fontSize:'0.7rem', fontWeight:600, color:'var(--text-muted)'}}>Tier {currentTier}</div>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            {pendingChallenges.length > 0 && (
+              <div className="card" style={{marginTop: 20}}>
+                <h3 style={{fontSize:'1.1rem',fontWeight:700,color:'var(--navy)',marginBottom:16}}>⚔️ Pending Challenges</h3>
+                {pendingChallenges.map(c => (
+                  <div key={c.id} style={{padding:16, border:'1px solid var(--border)', borderRadius:8, marginBottom:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12}}>
+                    <div>
+                      <div style={{fontSize:'0.9rem', color:'var(--navy)'}}>
+                        <strong style={{color:'var(--red)'}}>Challenger:</strong> {c.challenger?.name} 
+                        <span style={{margin:'0 10px', color:'var(--text-muted)'}}>VS</span> 
+                        <strong style={{color:'var(--gold-dark)'}}>Defender:</strong> {c.defender?.name}
+                      </div>
+                      <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginTop:4}}>
+                        📅 {new Date(c.date).toLocaleDateString()} | 📍 {c.venue}
+                      </div>
+                    </div>
+                    {user && (
+                      <div style={{display:'flex', gap:8}}>
+                        <button className="btn btn-sm btn-primary" onClick={() => handleResolveChallenge(c.id, 'CHALLENGER_WON')}>🏆 Challenger Won</button>
+                        <button className="btn btn-sm btn-secondary" onClick={() => handleResolveChallenge(c.id, 'DEFENDER_WON')}>🛡️ Defender Won</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            </>
+        ) : matches.length===0?(
             <div className="card empty-state"><div className="empty-icon">📅</div><div className="empty-title">No fixtures generated yet</div><div className="empty-desc">Admin will generate the fixture after all teams are registered</div></div>
           ):(
             <>
@@ -562,10 +682,44 @@ const TournamentDetail = () => {
       {/* BRACKET TAB */}
       {activeTab==='bracket'&&(
         <div className="fade-in">
-          {matches.length===0?(
-            <div className="card empty-state"><div className="empty-icon">🏆</div><div className="empty-title">Bracket not generated yet</div></div>
-          ):(
-            <div className="card"><BracketView winnerMatches={winnerMatches} loserMatches={loserMatches} finalMatches={finalMatches}/></div>
+          {tournament.format === 'pyramid' ? (
+            <div className="card">
+              <h3 style={{fontSize:'1.1rem',fontWeight:700,color:'var(--navy)',marginBottom:20}}>📐 Pyramid Ladder</h3>
+              {pyramidStandings.length === 0 ? (
+                <div className="empty-state"><div className="empty-title">Ladder not generated yet</div></div>
+              ) : (
+                <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
+                  {pyramidStandings.map((player, idx) => {
+                    const currentTier = getTier(player.rank);
+                    const nextTier = idx < pyramidStandings.length - 1 ? getTier(pyramidStandings[idx+1].rank) : currentTier;
+                    const isNewTier = currentTier !== nextTier;
+                    return (
+                      <React.Fragment key={player.id}>
+                        <div style={{
+                          display:'flex', alignItems:'center', padding:'12px 16px', background: player.rank===1?'var(--gold-light)':'var(--bg-secondary)',
+                          borderLeft: player.rank===1?'4px solid var(--gold)':'4px solid transparent', borderRadius: 8, marginBottom: isNewTier ? 0 : 8
+                        }}>
+                          <div style={{width:40, fontWeight:700, color: player.rank===1?'var(--gold-dark)':'var(--text-muted)'}}>#{player.rank}</div>
+                          <div style={{flex:1, fontWeight:600, color:player.rank===1?'var(--gold-dark)':'var(--text-primary)'}}>{player.name}</div>
+                          <div style={{fontWeight:700, color: player.rank===1?'var(--gold-dark)':'var(--royal)'}}>{player.score} pts</div>
+                        </div>
+                        {isNewTier && (
+                          <div style={{height: 2, background: '#111', margin: '8px 0', opacity: 0.2, position: 'relative'}}>
+                            <div style={{position:'absolute', right:0, top:-8, background:'var(--bg-card)', padding:'0 8px', fontSize:'0.7rem', fontWeight:600, color:'var(--text-muted)'}}>Tier {currentTier}</div>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            matches.length===0?(
+              <div className="card empty-state"><div className="empty-icon">🏆</div><div className="empty-title">Bracket not generated yet</div></div>
+            ):(
+              <div className="card"><BracketView winnerMatches={winnerMatches} loserMatches={loserMatches} finalMatches={finalMatches}/></div>
+            )
           )}
         </div>
       )}
@@ -659,6 +813,50 @@ const TournamentDetail = () => {
                 <button type="submit" className="btn btn-primary" style={{flex:2}} disabled={regLoading}>{regLoading?'Submitting...':'✍️ Submit Registration'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CHALLENGE MODAL */}
+      {challengeModalData && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setChallengeModalData(null)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">⚔️ Issue Challenge</h2>
+              <button className="modal-close" onClick={()=>setChallengeModalData(null)}>✕</button>
+            </div>
+            <p style={{marginBottom:16}}>Challenger: <strong>{challengeModalData.challenger.name}</strong> (Rank #{challengeModalData.challenger.rank})</p>
+            {challengeError && <div className="alert alert-error">{challengeError}</div>}
+            
+            {challengeModalData.targets.length === 0 ? (
+              <div className="alert alert-warning">No available targets found in the valid tiers above you.</div>
+            ) : (
+              <form onSubmit={handleIssueChallenge}>
+                <div className="form-group">
+                  <label className="form-label">Select Opponent *</label>
+                  <select className="form-select" value={challengeForm.defenderId} onChange={e=>setChallengeForm({...challengeForm, defenderId: e.target.value})} required>
+                    <option value="">-- Choose Opponent --</option>
+                    {challengeModalData.targets.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} (Rank #{t.rank})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Proposed Date</label>
+                    <input type="date" className="form-input" value={challengeForm.date} onChange={e=>setChallengeForm({...challengeForm, date: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Venue / Court</label>
+                    <input type="text" className="form-input" placeholder="e.g. Center Court" value={challengeForm.venue} onChange={e=>setChallengeForm({...challengeForm, venue: e.target.value})} />
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:10,marginTop:20}}>
+                  <button type="button" className="btn btn-secondary" style={{flex:1}} onClick={()=>setChallengeModalData(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" style={{flex:2}}>Send Challenge</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

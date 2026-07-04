@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { tournamentAPI, teamAPI, matchAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import SetupScreen from '../components/pyramid/SetupScreen';
+import '../components/pyramid/Pyramid.css';
 
 const sports = ['cricket','football','basketball','badminton','tennis','volleyball','other'];
 
@@ -15,6 +17,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [showTModal, setShowTModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(null);
+  const [showPyramidModal, setShowPyramidModal] = useState(null);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -202,10 +205,11 @@ const AdminDashboard = () => {
                           </select>
                         </td>
                         <td>
-                          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                            <Link to={`/tournaments/${t._id}`} className="btn btn-secondary btn-sm">View</Link>
-                            <button className="btn btn-royal btn-sm" onClick={()=>handleGenerateFixture(t._id)}>⚡ Fixture</button>
-                            <button className="btn btn-secondary btn-sm" onClick={()=>fetchMatchesForTournament(t._id)}>📅 Matches</button>
+                            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                              <Link to={`/tournaments/${t._id}`} className="btn btn-secondary btn-sm">View</Link>
+                              <button className="btn btn-royal btn-sm" onClick={()=>handleGenerateFixture(t._id)}>⚡ Fixture</button>
+                              <button className="btn btn-gold btn-sm" onClick={()=>setShowPyramidModal(t._id)}>📐 Pyramid</button>
+                              <button className="btn btn-secondary btn-sm" onClick={()=>fetchMatchesForTournament(t._id)}>📅 Matches</button>
                             <button className="btn btn-danger btn-sm" onClick={()=>handleDeleteTournament(t._id,t.name)}>🗑</button>
                           </div>
                         </td>
@@ -648,6 +652,25 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── PYRAMID SETUP MODAL ── */}
+      {showPyramidModal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowPyramidModal(null)}>
+          <div className="modal" style={{maxWidth: 600, padding: 0, overflow: 'hidden', background: '#0f172a'}}>
+            <div style={{padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <h2 style={{margin: 0, fontSize: '1.2rem', color: '#fff'}}>📐 Generate Pyramid</h2>
+              <button onClick={() => setShowPyramidModal(null)} style={{background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'rgba(255,255,255,0.6)'}}>✕</button>
+            </div>
+            <div style={{maxHeight: '80vh', overflowY: 'auto'}}>
+              <SetupScreen 
+                tournamentId={showPyramidModal} 
+                refreshData={() => { fetchAll(); if (selectedTournament === showPyramidModal) fetchMatchesForTournament(selectedTournament); }} 
+                onComplete={() => { setShowPyramidModal(null); showMsg('✅ Pyramid generated!'); }} 
+              />
+            </div>
           </div>
         </div>
       )}
