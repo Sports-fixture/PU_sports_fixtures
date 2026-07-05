@@ -6,6 +6,76 @@ const Tournament = require('../models/Tournament');
 const { adminAuth } = require('../middleware/auth');
 const router = express.Router();
 
+// ─── Circle Method — Double Round Robin Engine ────────────────────────
+const BYE_NAME = 'BYE';
+
+function generateDRR(teams, tournament) {
+  const list = teams.map((t, i) => ({ id: t._id.toString(), name: t.teamName, seed: i + 1 }));
+  if (list.length % 2 !== 0) list.push({ id: BYE_NAME, name: BYE_NAME });
+
+  const total = list.length;
+  const rounds = total - 1;
+  const half = total / 2;
+  const fixed = list[0];
+  let rotating = list.slice(1);
+  const leg1Rounds = [];
+
+  for (let r = 0; r < rounds; r++) {
+    const circle = [fixed, ...rotating];
+    const pairings = [];
+    for (let i = 0; i < half; i++) {
+      const a = circle[i];
+      const b = circle[total - 1 - i];
+      pairings.push(r % 2 === 0 ? { teamA: a, teamB: b } : { teamA: b, teamB: a });
+    }
+    leg1Rounds.push(pairings);
+    const last = rotating.pop();
+    rotating.unshift(last);
+  }
+
+  const TIME_SLOTS = ['09:00', '11:00', '14:00', '16:00'];
+  const totalLeg1 = leg1Rounds.length;
+  let matchNumber = 1;
+  const allMatches = [];
+
+  const buildMatch = (ri, leg, teamA, teamB, mi) => {
+    const isBye = teamA.id === BYE_NAME || teamB.id === BYE_NAME;
+    const round = leg === 1 ? ri + 1 : totalLeg1 + ri + 1;
+    const roundDate = tournament.startDate ? new Date(tournament.startDate) : null;
+    if (roundDate) roundDate.setDate(roundDate.getDate() + (leg === 1 ? ri : totalLeg1 + ri));
+    return {
+      tournament: tournament._id,
+      matchNumber: matchNumber++,
+      round,
+      roundName: `Round ${round} · Leg ${leg}`,
+      bracketType: 'double_round_robin',
+      leg,
+      teamAName: leg === 1 ? teamA.name : teamB.name,
+      teamBName: leg === 1 ? teamB.name : teamA.name,
+      isRest: isBye,
+      status: isBye ? 'rest' : 'scheduled',
+      isBye: false,
+      venue: isBye ? '' : (tournament.venue || ''),
+      scheduledDate: isBye ? null : roundDate,
+      time: isBye ? '' : TIME_SLOTS[mi % TIME_SLOTS.length],
+    };
+  };
+
+  leg1Rounds.forEach((pairings, ri) => {
+    pairings.forEach(({ teamA, teamB }, mi) => {
+      allMatches.push(buildMatch(ri, 1, teamA, teamB, mi));
+    });
+  });
+
+  leg1Rounds.forEach((pairings, ri) => {
+    pairings.forEach(({ teamA, teamB }, mi) => {
+      allMatches.push(buildMatch(ri, 2, teamA, teamB, mi));
+    });
+  });
+
+  return allMatches;
+}
+// ─────────────────────────────────────────────────────────────────────
 router.get('/tournament/:tournamentId', async (req, res) => {
   try {
     const matches = await Match.find({ tournament: req.params.tournamentId })
@@ -32,6 +102,21 @@ router.post('/generate/:tournamentId', adminAuth, async (req, res) => {
 
     await Match.deleteMany({ tournament: req.params.tournamentId });
 
+
+     // ── Double Round Robin ───────────────────────────────────────────
+        if (tournament.format === 'double_round_robin') {
+          // Auto-assign seeds by registration order
+          for (let i = 0; i < teams.length; i++) {
+            await Team.findByIdAndUpdate(teams[i]._id, { seed: i + 1, wins: 0, losses: 0 });
+          }
+          const matches = generateDRR(teams, tournament);
+          await Match.insertMany(matches);
+          await Tournament.findByIdAndUpdate(req.params.tournamentId, { status: 'fixture_generated' });
+          const realMatches = matches.filter(m => m.status !== 'rest').length;
+          return res.json({ message: 'Double Round Robin fixture generated', matches: matches.length, realMatches });
+    }
+    
+    
     for (let i = 0; i < teams.length; i++) {
       await Team.findByIdAndUpdate(teams[i]._id, { seed: i + 1, wins: 0, losses: 0, bracket: 'pending' });
       teams[i].seed = i + 1;

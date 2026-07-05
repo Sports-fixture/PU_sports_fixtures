@@ -13,6 +13,278 @@ const sports = [
   "other",
 ];
 
+// ─── DRR Fixtures Display Component ─────────────────────────────────
+const DRRFixtures = ({ matches, onUpdateScore }) => {
+  const leg1 = matches.filter(
+    (m) => m.bracketType === "double_round_robin" && m.leg === 1,
+  );
+  const leg2 = matches.filter(
+    (m) => m.bracketType === "double_round_robin" && m.leg === 2,
+  );
+
+  const groupByRound = (list) => {
+    const map = {};
+    list.forEach((m) => {
+      if (!map[m.round]) map[m.round] = [];
+      map[m.round].push(m);
+    });
+    return Object.entries(map).sort(([a], [b]) => Number(a) - Number(b));
+  };
+
+  const MatchCard = ({ match }) => {
+    const legColor = match.leg === 1 ? "#2B4C8C" : "#C8963E";
+    if (match.isRest || match.status === "rest") {
+      return (
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-light)",
+            borderRadius: 10,
+            padding: "10px 16px",
+            marginBottom: 8,
+            opacity: 0.55,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 600,
+              color: "var(--text-secondary)",
+              fontSize: "0.85rem",
+            }}
+          >
+            {match.teamAName === "BYE" ? match.teamBName : match.teamAName}
+          </span>
+          <span className="badge badge-blue" style={{ fontSize: "0.62rem" }}>
+            Rest Round
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderLeft: `3px solid ${legColor}`,
+          borderRadius: 10,
+          padding: "12px 16px",
+          marginBottom: 8,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}
+        >
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              background: "var(--bg-secondary)",
+              padding: "2px 7px",
+              borderRadius: 4,
+            }}
+          >
+            M{match.matchNumber}
+          </span>
+          <span
+            style={{
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontSize: "0.92rem",
+            }}
+          >
+            {match.teamAName}
+          </span>
+          <span
+            style={{
+              color: "var(--text-muted)",
+              fontWeight: 700,
+              fontSize: "0.75rem",
+              padding: "3px 10px",
+              background: "var(--bg-secondary)",
+              borderRadius: 6,
+            }}
+          >
+            VS
+          </span>
+          <span
+            style={{
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontSize: "0.92rem",
+            }}
+          >
+            {match.teamBName}
+          </span>
+          {match.winnerName && (
+            <span
+              style={{
+                color: "var(--accent-green)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+              }}
+            >
+              🏆 {match.winnerName}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {match.scheduledDate && (
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              📅 {new Date(match.scheduledDate).toLocaleDateString("en-IN")}
+              {match.time && ` · ${match.time}`}
+            </span>
+          )}
+          {match.venue && (
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              📍 {match.venue}
+            </span>
+          )}
+          <span
+            className={`badge ${match.status === "completed" ? "badge-green" : match.status === "live" ? "badge-live" : "badge-gray"}`}
+            style={{ fontSize: "0.62rem" }}
+          >
+            {match.status}
+          </span>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => onUpdateScore(match)}
+            style={{ fontSize: "0.72rem", padding: "4px 10px" }}
+          >
+            {match.status === "completed" ? "✏️ Edit" : "📊 Score"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div
+        style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}
+      >
+        <span className="badge badge-blue">🔵 Leg 1 — First Fixtures</span>
+        <span className="badge badge-gold">🟡 Leg 2 — Return Fixtures</span>
+      </div>
+      {leg1.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              color: "#2B4C8C",
+              marginBottom: 14,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            🔵 Leg 1
+          </div>
+          {groupByRound(leg1).map(([round, rMatches]) => (
+            <div key={round} style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "var(--accent-gold)",
+                    background: "var(--gold-bg)",
+                    padding: "2px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #E8C07A",
+                  }}
+                >
+                  ROUND {String(round).padStart(2, "0")}
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "var(--border-light)",
+                  }}
+                />
+              </div>
+              {rMatches.map((m) => (
+                <MatchCard key={m._id} match={m} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {leg2.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              color: "#C8963E",
+              marginBottom: 14,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            🟡 Leg 2
+          </div>
+          {groupByRound(leg2).map(([round, rMatches]) => (
+            <div key={round} style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "var(--accent-gold)",
+                    background: "var(--gold-bg)",
+                    padding: "2px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #E8C07A",
+                  }}
+                >
+                  ROUND {String(round).padStart(2, "0")}
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "var(--border-light)",
+                  }}
+                />
+              </div>
+              {rMatches.map((m) => (
+                <MatchCard key={m._id} match={m} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────
+
 const AdminDashboard = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +295,13 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [showTModal, setShowTModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(null);
+  const [showDRRScoreModal, setShowDRRScoreModal] = useState(null);
+  const [drrScoreForm, setDrrScoreForm] = useState({
+    status: "completed",
+    winnerName: "",
+    venue: "",
+    time: "",
+  });
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -73,6 +352,7 @@ const AdminDashboard = () => {
   };
 
   const fetchMatchesForTournament = async (tId) => {
+    setMatches([]); // clear old matches first to avoid stale display
     const m = await matchAPI.getByTournament(tId);
     setMatches(m.data);
     setSelectedTournament(tId);
@@ -125,22 +405,30 @@ const AdminDashboard = () => {
     // )
     //   return;
 
-  const t = tournaments.find(t => t._id === tId);
+    const t = tournaments.find((t) => t._id === tId);
 
-  const formatLabel =
-  t?.format === 'single_knockout'
-    ? 'single knockout'
-    : 'double knockout';
+    const formatLabel =
+      t?.format === "single_knockout"
+        ? "Single Knockout"
+        : t?.format === "double_round_robin"
+          ? "Double Round Robin"
+          : "Double Knockout";
 
- if (
-  !window.confirm(
-    `Generate ${formatLabel} fixture? This will delete existing matches.`
-  )
-) return;
+    if (
+      !window.confirm(
+        `Generate ${formatLabel} fixture? This will delete existing matches.`,
+      )
+    )
+      return;
 
     try {
       const res = await matchAPI.generate(tId);
-      setMsg(`Fixture generated: ${res.data.matches} matches created!`);
+      const isDRR =
+        res.data.message && res.data.message.includes("Double Round Robin");
+      const matchCount = res.data.realMatches || res.data.matches;
+      setMsg(
+        `Fixture generated: ${matchCount} ${isDRR ? "DRR" : ""} matches created!`,
+      );
       await fetchMatchesForTournament(tId);
     } catch (err) {
       setError(err.response?.data?.message || "Error generating fixture");
@@ -190,6 +478,35 @@ const AdminDashboard = () => {
       status: match.status === "completed" ? "completed" : "live",
       notes: match.notes || "",
     });
+  };
+
+  const openDRRScoreModal = (match) => {
+    setShowDRRScoreModal(match);
+    setDrrScoreForm({
+      status: match.status || "completed",
+      winnerName: match.winnerName || "",
+      venue: match.venue || "",
+      time: match.time || "",
+    });
+  };
+
+  const handleDRRScoreUpdate = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await matchAPI.update(showDRRScoreModal._id, {
+        status: drrScoreForm.status,
+        winnerName: drrScoreForm.winnerName,
+        venue: drrScoreForm.venue,
+        time: drrScoreForm.time,
+      });
+      setMsg("Match updated!");
+      setShowDRRScoreModal(null);
+      if (selectedTournament)
+        await fetchMatchesForTournament(selectedTournament);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error updating match");
+    }
   };
 
   const pendingTeams = teams.filter((t) => t.status === "pending");
@@ -765,372 +1082,402 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <>
-                  {/* Legend */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      marginBottom: 20,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span className="badge badge-gold">🥇 Winners Bracket</span>
-                    <span className="badge badge-blue">🔁 Losers Bracket</span>
-                    <span className="badge badge-purple">🏆 Grand Final</span>
-                    <span className="badge badge-green">✅ Completed</span>
-                    <span className="badge badge-gray">
-                      ⏳ Waiting for teams
-                    </span>
-                  </div>
+                  {/* ── DRR Fixtures Display ── */}
+                  {matches.some(
+                    (m) => m.bracketType === "double_round_robin",
+                  ) && (
+                    <DRRFixtures
+                      matches={matches}
+                      onUpdateScore={openDRRScoreModal}
+                    />
+                  )}
 
-                  {/* Group by bracket section */}
-                  {[
-                    {
-                      label: "🥇 Winners Bracket",
-                      type: "winners",
-                      color: "var(--accent-gold)",
-                      cls: "badge-gold",
-                    },
-                    {
-                      label: "🔁 Losers Bracket",
-                      type: "losers",
-                      color: "var(--accent-blue)",
-                      cls: "badge-blue",
-                    },
-                    {
-                      label: "🏆 Grand Final",
-                      type: "grand_final",
-                      color: "var(--accent-purple)",
-                      cls: "badge-purple",
-                    },
-                  ].map(({ label, type, color, cls }) => {
-                    const section = matches.filter(
-                      (m) => m.bracketType === type,
-                    );
-                    if (section.length === 0) return null;
-                    return (
-                      <div key={type} style={{ marginBottom: 28 }}>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            fontWeight: 700,
-                            color,
-                            marginBottom: 12,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.08em",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          {label}
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--text-muted)",
-                              fontWeight: 400,
-                              textTransform: "none",
-                            }}
-                          >
-                            (
-                            {
-                              section.filter(
-                                (m) =>
-                                  m.status === "completed" ||
-                                  m.status === "bye",
-                              ).length
-                            }
-                            /{section.length} done)
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8,
-                          }}
-                        >
-                          {section.map((match) => {
-                            const hasBothTeams = match.teamA && match.teamB;
-                            const isReady =
-                              hasBothTeams &&
-                              match.status !== "completed" &&
-                              match.status !== "bye";
-                            const isDone =
-                              match.status === "completed" ||
-                              match.status === "bye";
-                            return (
-                              <div
-                                key={match._id}
-                                className="card"
+                  {/* ── DKO Bracket Display (existing) ── */}
+                  {!matches.some(
+                    (m) => m.bracketType === "double_round_robin",
+                  ) && (
+                    <>
+                      {/* Legend */}
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          marginBottom: 20,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span className="badge badge-gold">
+                          🥇 Winners Bracket
+                        </span>
+                        <span className="badge badge-blue">
+                          🔁 Losers Bracket
+                        </span>
+                        <span className="badge badge-purple">
+                          🏆 Grand Final
+                        </span>
+                        <span className="badge badge-green">✅ Completed</span>
+                        <span className="badge badge-gray">
+                          ⏳ Waiting for teams
+                        </span>
+                      </div>
+
+                      {/* Group by bracket section */}
+                      {[
+                        {
+                          label: "🥇 Winners Bracket",
+                          type: "winners",
+                          color: "var(--accent-gold)",
+                          cls: "badge-gold",
+                        },
+                        {
+                          label: "🔁 Losers Bracket",
+                          type: "losers",
+                          color: "var(--accent-blue)",
+                          cls: "badge-blue",
+                        },
+                        {
+                          label: "🏆 Grand Final",
+                          type: "grand_final",
+                          color: "var(--accent-purple)",
+                          cls: "badge-purple",
+                        },
+                      ].map(({ label, type, color, cls }) => {
+                        const section = matches.filter(
+                          (m) => m.bracketType === type,
+                        );
+                        if (section.length === 0) return null;
+                        return (
+                          <div key={type} style={{ marginBottom: 28 }}>
+                            <div
+                              style={{
+                                fontSize: "0.8rem",
+                                fontWeight: 700,
+                                color,
+                                marginBottom: 12,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              {label}
+                              <span
                                 style={{
-                                  borderLeft: `3px solid ${color}`,
-                                  padding: "14px 18px",
-                                  opacity: isDone ? 0.75 : 1,
-                                  background: isReady
-                                    ? "var(--bg-card-hover)"
-                                    : "var(--bg-card)",
+                                  fontSize: "0.7rem",
+                                  color: "var(--text-muted)",
+                                  fontWeight: 400,
+                                  textTransform: "none",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    gap: 12,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <div style={{ flex: 1 }}>
-                                    {/* Header row */}
+                                (
+                                {
+                                  section.filter(
+                                    (m) =>
+                                      m.status === "completed" ||
+                                      m.status === "bye",
+                                  ).length
+                                }
+                                /{section.length} done)
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 8,
+                              }}
+                            >
+                              {section.map((match) => {
+                                const hasBothTeams = match.teamA && match.teamB;
+                                const isReady =
+                                  hasBothTeams &&
+                                  match.status !== "completed" &&
+                                  match.status !== "bye";
+                                const isDone =
+                                  match.status === "completed" ||
+                                  match.status === "bye";
+                                return (
+                                  <div
+                                    key={match._id}
+                                    className="card"
+                                    style={{
+                                      borderLeft: `3px solid ${color}`,
+                                      padding: "14px 18px",
+                                      opacity: isDone ? 0.75 : 1,
+                                      background: isReady
+                                        ? "var(--bg-card-hover)"
+                                        : "var(--bg-card)",
+                                    }}
+                                  >
                                     <div
                                       style={{
                                         display: "flex",
-                                        gap: 8,
-                                        marginBottom: 10,
-                                        flexWrap: "wrap",
+                                        justifyContent: "space-between",
                                         alignItems: "center",
+                                        gap: 12,
+                                        flexWrap: "wrap",
                                       }}
                                     >
-                                      <span
-                                        style={{
-                                          fontFamily: "JetBrains Mono",
-                                          fontSize: "0.72rem",
-                                          color: "var(--text-muted)",
-                                          background: "var(--bg-secondary)",
-                                          padding: "2px 8px",
-                                          borderRadius: 4,
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        M{match.matchNumber}
-                                      </span>
-                                      <span
-                                        className={`badge ${cls}`}
-                                        style={{ fontSize: "0.68rem" }}
-                                      >
-                                        {match.roundName}
-                                      </span>
-                                      <span
-                                        className={`badge ${isDone ? (match.isBye ? "badge-blue" : "badge-green") : isReady ? "badge-gold" : "badge-gray"}`}
-                                        style={{ fontSize: "0.68rem" }}
-                                      >
-                                        {match.isBye
-                                          ? "BYE"
-                                          : isDone
-                                            ? "COMPLETED"
-                                            : isReady
-                                              ? "▶ READY"
-                                              : "⏳ WAITING"}
-                                      </span>
-                                    </div>
-
-                                    {/* Match content */}
-                                    {match.isBye ? (
-                                      <div
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 10,
-                                        }}
-                                      >
-                                        <span
-                                          style={{
-                                            fontWeight: 700,
-                                            color: "var(--text-primary)",
-                                            fontSize: "1rem",
-                                          }}
-                                        >
-                                          {match.teamA?.teamName || "TBD"}
-                                        </span>
-                                        <span
-                                          style={{
-                                            fontSize: "0.8rem",
-                                            color: "var(--accent-blue)",
-                                          }}
-                                        >
-                                          → Auto advances (BYE)
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <div
-                                        style={{
-                                          display: "grid",
-                                          gridTemplateColumns: "1fr auto 1fr",
-                                          alignItems: "center",
-                                          gap: 10,
-                                        }}
-                                      >
-                                        {/* Team A */}
-                                        <div>
-                                          <div
-                                            style={{
-                                              fontWeight:
-                                                match.winner?._id ===
-                                                match.teamA?._id
-                                                  ? 800
-                                                  : 500,
-                                              color:
-                                                match.winner?._id ===
-                                                match.teamA?._id
-                                                  ? color
-                                                  : match.teamA
-                                                    ? "var(--text-primary)"
-                                                    : "var(--text-muted)",
-                                              fontSize: "0.95rem",
-                                              fontStyle: match.teamA
-                                                ? "normal"
-                                                : "italic",
-                                            }}
-                                          >
-                                            {match.winner?._id ===
-                                              match.teamA?._id && "🏆 "}
-                                            {match.teamA?.teamName ||
-                                              "TBD — waiting for result"}
-                                          </div>
-                                          {isDone &&
-                                            match.teamAScore &&
-                                            match.teamAScore.runs > 0 && (
-                                              <div
-                                                style={{
-                                                  fontFamily: "JetBrains Mono",
-                                                  fontSize: "0.82rem",
-                                                  color,
-                                                  marginTop: 2,
-                                                }}
-                                              >
-                                                {match.teamAScore.runs}/
-                                                {match.teamAScore.wickets} (
-                                                {match.teamAScore.overs} ov)
-                                              </div>
-                                            )}
-                                        </div>
-                                        {/* VS */}
+                                      <div style={{ flex: 1 }}>
+                                        {/* Header row */}
                                         <div
                                           style={{
-                                            textAlign: "center",
-                                            color: "var(--text-muted)",
-                                            fontWeight: 700,
-                                            fontSize: "0.78rem",
-                                            padding: "6px 12px",
-                                            background: "var(--bg-secondary)",
-                                            borderRadius: 6,
+                                            display: "flex",
+                                            gap: 8,
+                                            marginBottom: 10,
+                                            flexWrap: "wrap",
+                                            alignItems: "center",
                                           }}
                                         >
-                                          VS
-                                        </div>
-                                        {/* Team B */}
-                                        <div style={{ textAlign: "right" }}>
-                                          <div
-                                            style={{
-                                              fontWeight:
-                                                match.winner?._id ===
-                                                match.teamB?._id
-                                                  ? 800
-                                                  : 500,
-                                              color:
-                                                match.winner?._id ===
-                                                match.teamB?._id
-                                                  ? color
-                                                  : match.teamB
-                                                    ? "var(--text-primary)"
-                                                    : "var(--text-muted)",
-                                              fontSize: "0.95rem",
-                                              fontStyle: match.teamB
-                                                ? "normal"
-                                                : "italic",
-                                            }}
-                                          >
-                                            {match.winner?._id ===
-                                              match.teamB?._id && "🏆 "}
-                                            {match.teamB?.teamName ||
-                                              "TBD — waiting for result"}
-                                          </div>
-                                          {isDone &&
-                                            match.teamBScore &&
-                                            match.teamBScore.runs > 0 && (
-                                              <div
-                                                style={{
-                                                  fontFamily: "JetBrains Mono",
-                                                  fontSize: "0.82rem",
-                                                  color: "var(--accent-blue)",
-                                                  marginTop: 2,
-                                                }}
-                                              >
-                                                {match.teamBScore.runs}/
-                                                {match.teamBScore.wickets} (
-                                                {match.teamBScore.overs} ov)
-                                              </div>
-                                            )}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Winner line */}
-                                    {match.winner && (
-                                      <div
-                                        style={{
-                                          marginTop: 8,
-                                          fontSize: "0.78rem",
-                                          color: "var(--accent-green)",
-                                          display: "flex",
-                                          gap: 16,
-                                        }}
-                                      >
-                                        <span>
-                                          🏆 Winner → next match:{" "}
-                                          <strong>
-                                            {match.winner.teamName}
-                                          </strong>
-                                        </span>
-                                        {match.loser && (
                                           <span
                                             style={{
-                                              color: "var(--accent-red)",
+                                              fontFamily: "JetBrains Mono",
+                                              fontSize: "0.72rem",
+                                              color: "var(--text-muted)",
+                                              background: "var(--bg-secondary)",
+                                              padding: "2px 8px",
+                                              borderRadius: 4,
+                                              fontWeight: 700,
                                             }}
                                           >
-                                            ⬇️ Loser → LB:{" "}
-                                            <strong>
-                                              {match.loser.teamName}
-                                            </strong>
+                                            M{match.matchNumber}
+                                          </span>
+                                          <span
+                                            className={`badge ${cls}`}
+                                            style={{ fontSize: "0.68rem" }}
+                                          >
+                                            {match.roundName}
+                                          </span>
+                                          <span
+                                            className={`badge ${isDone ? (match.isBye ? "badge-blue" : "badge-green") : isReady ? "badge-gold" : "badge-gray"}`}
+                                            style={{ fontSize: "0.68rem" }}
+                                          >
+                                            {match.isBye
+                                              ? "BYE"
+                                              : isDone
+                                                ? "COMPLETED"
+                                                : isReady
+                                                  ? "▶ READY"
+                                                  : "⏳ WAITING"}
+                                          </span>
+                                        </div>
+
+                                        {/* Match content */}
+                                        {match.isBye ? (
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 10,
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontWeight: 700,
+                                                color: "var(--text-primary)",
+                                                fontSize: "1rem",
+                                              }}
+                                            >
+                                              {match.teamA?.teamName || "TBD"}
+                                            </span>
+                                            <span
+                                              style={{
+                                                fontSize: "0.8rem",
+                                                color: "var(--accent-blue)",
+                                              }}
+                                            >
+                                              → Auto advances (BYE)
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <div
+                                            style={{
+                                              display: "grid",
+                                              gridTemplateColumns:
+                                                "1fr auto 1fr",
+                                              alignItems: "center",
+                                              gap: 10,
+                                            }}
+                                          >
+                                            {/* Team A */}
+                                            <div>
+                                              <div
+                                                style={{
+                                                  fontWeight:
+                                                    match.winner?._id ===
+                                                    match.teamA?._id
+                                                      ? 800
+                                                      : 500,
+                                                  color:
+                                                    match.winner?._id ===
+                                                    match.teamA?._id
+                                                      ? color
+                                                      : match.teamA
+                                                        ? "var(--text-primary)"
+                                                        : "var(--text-muted)",
+                                                  fontSize: "0.95rem",
+                                                  fontStyle: match.teamA
+                                                    ? "normal"
+                                                    : "italic",
+                                                }}
+                                              >
+                                                {match.winner?._id ===
+                                                  match.teamA?._id && "🏆 "}
+                                                {match.teamA?.teamName ||
+                                                  "TBD — waiting for result"}
+                                              </div>
+                                              {isDone &&
+                                                match.teamAScore &&
+                                                match.teamAScore.runs > 0 && (
+                                                  <div
+                                                    style={{
+                                                      fontFamily:
+                                                        "JetBrains Mono",
+                                                      fontSize: "0.82rem",
+                                                      color,
+                                                      marginTop: 2,
+                                                    }}
+                                                  >
+                                                    {match.teamAScore.runs}/
+                                                    {match.teamAScore.wickets} (
+                                                    {match.teamAScore.overs} ov)
+                                                  </div>
+                                                )}
+                                            </div>
+                                            {/* VS */}
+                                            <div
+                                              style={{
+                                                textAlign: "center",
+                                                color: "var(--text-muted)",
+                                                fontWeight: 700,
+                                                fontSize: "0.78rem",
+                                                padding: "6px 12px",
+                                                background:
+                                                  "var(--bg-secondary)",
+                                                borderRadius: 6,
+                                              }}
+                                            >
+                                              VS
+                                            </div>
+                                            {/* Team B */}
+                                            <div style={{ textAlign: "right" }}>
+                                              <div
+                                                style={{
+                                                  fontWeight:
+                                                    match.winner?._id ===
+                                                    match.teamB?._id
+                                                      ? 800
+                                                      : 500,
+                                                  color:
+                                                    match.winner?._id ===
+                                                    match.teamB?._id
+                                                      ? color
+                                                      : match.teamB
+                                                        ? "var(--text-primary)"
+                                                        : "var(--text-muted)",
+                                                  fontSize: "0.95rem",
+                                                  fontStyle: match.teamB
+                                                    ? "normal"
+                                                    : "italic",
+                                                }}
+                                              >
+                                                {match.winner?._id ===
+                                                  match.teamB?._id && "🏆 "}
+                                                {match.teamB?.teamName ||
+                                                  "TBD — waiting for result"}
+                                              </div>
+                                              {isDone &&
+                                                match.teamBScore &&
+                                                match.teamBScore.runs > 0 && (
+                                                  <div
+                                                    style={{
+                                                      fontFamily:
+                                                        "JetBrains Mono",
+                                                      fontSize: "0.82rem",
+                                                      color:
+                                                        "var(--accent-blue)",
+                                                      marginTop: 2,
+                                                    }}
+                                                  >
+                                                    {match.teamBScore.runs}/
+                                                    {match.teamBScore.wickets} (
+                                                    {match.teamBScore.overs} ov)
+                                                  </div>
+                                                )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Winner line */}
+                                        {match.winner && (
+                                          <div
+                                            style={{
+                                              marginTop: 8,
+                                              fontSize: "0.78rem",
+                                              color: "var(--accent-green)",
+                                              display: "flex",
+                                              gap: 16,
+                                            }}
+                                          >
+                                            <span>
+                                              🏆 Winner → next match:{" "}
+                                              <strong>
+                                                {match.winner.teamName}
+                                              </strong>
+                                            </span>
+                                            {match.loser && (
+                                              <span
+                                                style={{
+                                                  color: "var(--accent-red)",
+                                                }}
+                                              >
+                                                ⬇️ Loser → LB:{" "}
+                                                <strong>
+                                                  {match.loser.teamName}
+                                                </strong>
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Action button */}
+                                      <div>
+                                        {!match.isBye && hasBothTeams && (
+                                          <button
+                                            className={`btn btn-sm ${isDone ? "btn-secondary" : "btn-primary"}`}
+                                            onClick={() =>
+                                              openScoreModal(match)
+                                            }
+                                          >
+                                            {isDone ? "✏️ Edit" : "📊 Score"}
+                                          </button>
+                                        )}
+                                        {!match.isBye && !hasBothTeams && (
+                                          <span
+                                            style={{
+                                              fontSize: "0.75rem",
+                                              color: "var(--text-muted)",
+                                              padding: "6px 10px",
+                                              background: "var(--bg-secondary)",
+                                              borderRadius: 6,
+                                            }}
+                                          >
+                                            ⏳ Awaiting teams
                                           </span>
                                         )}
                                       </div>
-                                    )}
+                                    </div>
                                   </div>
-
-                                  {/* Action button */}
-                                  <div>
-                                    {!match.isBye && hasBothTeams && (
-                                      <button
-                                        className={`btn btn-sm ${isDone ? "btn-secondary" : "btn-primary"}`}
-                                        onClick={() => openScoreModal(match)}
-                                      >
-                                        {isDone ? "✏️ Edit" : "📊 Score"}
-                                      </button>
-                                    )}
-                                    {!match.isBye && !hasBothTeams && (
-                                      <span
-                                        style={{
-                                          fontSize: "0.75rem",
-                                          color: "var(--text-muted)",
-                                          padding: "6px 10px",
-                                          background: "var(--bg-secondary)",
-                                          borderRadius: 6,
-                                        }}
-                                      >
-                                        ⏳ Awaiting teams
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -1224,6 +1571,9 @@ const AdminDashboard = () => {
                   >
                     <option value="single_knockout">Single Knockout</option>
                     <option value="double_knockout">Double Knockout</option>
+                    <option value="double_round_robin">
+                      Double Round Robin
+                    </option>
                   </select>
                 </div>
               </div>
@@ -1240,7 +1590,6 @@ const AdminDashboard = () => {
                   required
                 />
               </div>
-
 
               <div className="grid-2">
                 <div className="form-group">
@@ -1758,6 +2107,123 @@ const AdminDashboard = () => {
                   {scoreForm.winnerId
                     ? "✅ Save & Auto-Advance Teams"
                     : "Select a winner first"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DRR Score Update Modal */}
+      {showDRRScoreModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) =>
+            e.target === e.currentTarget && setShowDRRScoreModal(null)
+          }
+        >
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <button
+              className="modal-close"
+              onClick={() => setShowDRRScoreModal(null)}
+            >
+              ✕
+            </button>
+            <h2 className="modal-title">📊 Update DRR Match</h2>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                marginBottom: 16,
+                fontSize: "0.875rem",
+              }}
+            >
+              <strong style={{ color: "var(--navy)" }}>
+                {showDRRScoreModal.teamAName}
+              </strong>
+              <span style={{ margin: "0 8px", color: "var(--text-muted)" }}>
+                vs
+              </span>
+              <strong style={{ color: "var(--navy)" }}>
+                {showDRRScoreModal.teamBName}
+              </strong>
+            </p>
+            {error && <div className="alert alert-error">{error}</div>}
+            <form onSubmit={handleDRRScoreUpdate}>
+              <div className="form-group">
+                <label className="form-label">Winner</label>
+                <select
+                  className="form-select"
+                  value={drrScoreForm.winnerName}
+                  onChange={(e) =>
+                    setDrrScoreForm((f) => ({
+                      ...f,
+                      winnerName: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select winner</option>
+                  <option value={showDRRScoreModal.teamAName}>
+                    {showDRRScoreModal.teamAName}
+                  </option>
+                  <option value={showDRRScoreModal.teamBName}>
+                    {showDRRScoreModal.teamBName}
+                  </option>
+                  <option value="Draw">Draw</option>
+                </select>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Venue</label>
+                  <input
+                    className="form-input"
+                    value={drrScoreForm.venue}
+                    onChange={(e) =>
+                      setDrrScoreForm((f) => ({ ...f, venue: e.target.value }))
+                    }
+                    placeholder="Venue name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Time</label>
+                  <input
+                    className="form-input"
+                    type="time"
+                    value={drrScoreForm.time}
+                    onChange={(e) =>
+                      setDrrScoreForm((f) => ({ ...f, time: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  value={drrScoreForm.status}
+                  onChange={(e) =>
+                    setDrrScoreForm((f) => ({ ...f, status: e.target.value }))
+                  }
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="live">Live</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setShowDRRScoreModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 2 }}
+                >
+                  ✅ Save Match
                 </button>
               </div>
             </form>
