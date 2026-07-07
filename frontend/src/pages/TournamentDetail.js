@@ -307,6 +307,10 @@ const TournamentDetail = () => {
   };
 
   const approvedTeams = teams.filter((t) => t.status === "approved");
+
+  const progressPercent = tournament?.maxTeams
+    ? Math.min((approvedTeams.length / tournament.maxTeams) * 100, 100)
+    : 0;
   const winnerMatches = matches
     .filter((m) => m.bracketType === "winners")
     .sort((a, b) => a.matchNumber - b.matchNumber);
@@ -384,11 +388,13 @@ const TournamentDetail = () => {
                   {tournament.sport?.toUpperCase()}
                 </span>
                 <span
-                  className={`badge ${tournament.format === "single_knockout" ? "badge-blue" : "badge-purple"}`}
+                  className={`badge ${tournament.format === "single_knockout" ? "badge-blue" : tournament.format === "double_round_robin" ? "badge-green" : "badge-purple"}`}
                 >
                   {tournament.format === "single_knockout"
                     ? "➡️ SINGLE KNOCKOUT"
-                    : "🔄 DOUBLE KNOCKOUT"}
+                    : tournament.format === "double_round_robin"
+                      ? "🔁 DOUBLE ROUND ROBIN"
+                      : "🔄 DOUBLE KNOCKOUT"}
                 </span>
                 <span
                   className={`badge ${tournament.status === "registration_open" ? "badge-green" : tournament.status === "ongoing" ? "badge-gold" : "badge-gray"}`}
@@ -427,7 +433,9 @@ const TournamentDetail = () => {
           { key: "overview", label: "📋 Overview" },
           { key: "teams", label: `👥 Teams (${approvedTeams.length})` },
           { key: "fixtures", label: `📅 Schedule (${matches.length})` },
-          { key: "bracket", label: "🏆 Bracket" },
+          ...(tournament.format === "double_round_robin"
+            ? [{ key: "standings", label: "📊 Points Table" }]
+            : [{ key: "bracket", label: "🏆 Bracket" }]),
         ].map((tab) => (
           <button
             key={tab.key}
@@ -484,7 +492,9 @@ const TournamentDetail = () => {
                   "🔄 Format",
                   tournament.format === "single_knockout"
                     ? "Single Knockout"
-                    : "Double Knockout",
+                    : tournament.format === "double_round_robin"
+                      ? "Double Round Robin"
+                      : "Double Knockout",
                 ],
                 [
                   "📅 Start Date",
@@ -562,10 +572,10 @@ const TournamentDetail = () => {
                   <div
                     style={{
                       height: "100%",
-                      background:
-                        "linear-gradient(90deg, var(--accent-gold), #d97706)",
+                      background: "linear-gradient(90deg, #f59e0b, #d97706)",
                       borderRadius: 4,
-                      width: `${Math.min((approvedTeams.length / tournament.maxTeams) * 100, 100)}%`,
+                      width: `${progressPercent}%`,
+                      transition: "width 0.5s ease",
                     }}
                   />
                 </div>
@@ -767,6 +777,204 @@ const TournamentDetail = () => {
       )}
 
       {/* BRACKET */}
+      {/* DRR Standings Tab */}
+      {activeTab === "standings" && (
+        <div style={{ marginBottom: 40 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              marginBottom: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "5px 12px",
+              }}
+            >
+              🏆 Win ={" "}
+              <strong style={{ color: "var(--accent-gold)" }}>2 pts</strong>
+            </span>
+            <span
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "5px 12px",
+              }}
+            >
+              🤝 Draw ={" "}
+              <strong style={{ color: "var(--text-primary)" }}>1 pt</strong>
+            </span>
+            <span
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "5px 12px",
+              }}
+            >
+              ❌ Loss = <strong style={{ color: "var(--red)" }}>0 pts</strong>
+            </span>
+          </div>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "0.875rem",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: "var(--bg-secondary)",
+                  borderBottom: "2px solid var(--border)",
+                }}
+              >
+                {[
+                  "#",
+                  "Team",
+                  "Captain",
+                  "P",
+                  "W",
+                  "D",
+                  "L",
+                  "Pts",
+                  "Status",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: "10px 14px",
+                      textAlign: h === "#" ? "center" : "left",
+                      fontWeight: 700,
+                      color: "var(--text-secondary)",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {approvedTeams
+                .sort((a, b) => {
+                  const ptsA = (a.wins || 0) * 2 + (a.draws || 0);
+                  const ptsB = (b.wins || 0) * 2 + (b.draws || 0);
+                  return ptsB - ptsA;
+                })
+                .map((team, i) => (
+                  <tr
+                    key={team._id}
+                    style={{
+                      borderBottom: "1px solid var(--border-light)",
+                      background:
+                        i % 2 === 0 ? "var(--bg-card)" : "var(--bg-primary)",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        textAlign: "center",
+                        fontWeight: 700,
+                        color:
+                          i === 0 ? "var(--accent-gold)" : "var(--text-muted)",
+                      }}
+                    >
+                      {i + 1}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {team.teamName}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {team.captainName}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {(team.wins || 0) +
+                        (team.losses || 0) +
+                        (team.draws || 0)}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--accent-green)",
+                      }}
+                    >
+                      {team.wins || 0}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {team.draws || 0}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--red)",
+                      }}
+                    >
+                      {team.losses || 0}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        fontWeight: 700,
+                        color: "var(--accent-gold)",
+                      }}
+                    >
+                      {(team.wins || 0) * 2 + (team.draws || 0)}
+                    </td>
+                    <td style={{ padding: "12px 14px" }}>
+                      <span
+                        className={`badge ${team.status === "approved" ? "badge-green" : "badge-gray"}`}
+                        style={{ fontSize: "0.65rem" }}
+                      >
+                        {team.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {activeTab === "bracket" && (
         <div style={{ marginBottom: 40 }}>
           <BracketInfoBox format={tournament.format} />

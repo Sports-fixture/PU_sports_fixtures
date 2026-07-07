@@ -494,8 +494,12 @@ const AdminDashboard = () => {
     e.preventDefault();
     setError("");
     try {
+      // Auto set status to completed if winner is selected
+      const finalStatus = drrScoreForm.winnerName
+        ? "completed"
+        : drrScoreForm.status;
       await matchAPI.update(showDRRScoreModal._id, {
-        status: drrScoreForm.status,
+        status: finalStatus,
         winnerName: drrScoreForm.winnerName,
         venue: drrScoreForm.venue,
         time: drrScoreForm.time,
@@ -515,7 +519,10 @@ const AdminDashboard = () => {
     { key: "teams", label: "👥 Teams", count: teams.length },
     {
       key: "pending",
-      label: "⏳ Pending Approval",
+      label:
+        pendingTeams.length > 0
+          ? `⏳ Pending Approval (${pendingTeams.length})`
+          : "⏳ Pending Approval",
       count: pendingTeams.length,
       highlight: pendingTeams.length > 0,
     },
@@ -764,6 +771,7 @@ const AdminDashboard = () => {
                               <button
                                 className="btn btn-success btn-sm"
                                 onClick={() => handleGenerateFixture(t._id)}
+                                title="Generate or regenerate fixture"
                               >
                                 ⚡ Generate Fixture
                               </button>
