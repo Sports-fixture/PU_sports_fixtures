@@ -6,6 +6,87 @@ const Tournament = require("../models/Tournament");
 const { adminAuth } = require("../middleware/auth");
 const router = express.Router();
 
+// ─── Circle Method — Double Round Robin Engine ────────────────────────
+const BYE_NAME = "BYE";
+
+function generateDRR(teams, tournament) {
+  const list = teams.map((t, i) => ({
+    id: t._id.toString(),
+    name: t.teamName,
+    seed: i + 1,
+  }));
+  if (list.length % 2 !== 0) list.push({ id: BYE_NAME, name: BYE_NAME });
+
+  const total = list.length;
+  const rounds = total - 1;
+  const half = total / 2;
+  const fixed = list[0];
+  let rotating = list.slice(1);
+  const leg1Rounds = [];
+
+  for (let r = 0; r < rounds; r++) {
+    const circle = [fixed, ...rotating];
+    const pairings = [];
+    for (let i = 0; i < half; i++) {
+      const a = circle[i];
+      const b = circle[total - 1 - i];
+      pairings.push(
+        r % 2 === 0 ? { teamA: a, teamB: b } : { teamA: b, teamB: a },
+      );
+    }
+    leg1Rounds.push(pairings);
+    const last = rotating.pop();
+    rotating.unshift(last);
+  }
+
+  const TIME_SLOTS = ["09:00", "11:00", "14:00", "16:00"];
+  const totalLeg1 = leg1Rounds.length;
+  let matchNumber = 1;
+  const allMatches = [];
+
+  const buildMatch = (ri, leg, teamA, teamB, mi) => {
+    const isBye = teamA.id === BYE_NAME || teamB.id === BYE_NAME;
+    const round = leg === 1 ? ri + 1 : totalLeg1 + ri + 1;
+    const roundDate = tournament.startDate
+      ? new Date(tournament.startDate)
+      : null;
+    if (roundDate)
+      roundDate.setDate(
+        roundDate.getDate() + (leg === 1 ? ri : totalLeg1 + ri),
+      );
+    return {
+      tournament: tournament._id,
+      matchNumber: matchNumber++,
+      round,
+      roundName: `Round ${round} · Leg ${leg}`,
+      bracketType: "double_round_robin",
+      leg,
+      teamAName: leg === 1 ? teamA.name : teamB.name,
+      teamBName: leg === 1 ? teamB.name : teamA.name,
+      isRest: isBye,
+      status: isBye ? "rest" : "scheduled",
+      isBye: false,
+      venue: isBye ? "" : tournament.venue || "",
+      scheduledDate: isBye ? null : roundDate,
+      time: isBye ? "" : TIME_SLOTS[mi % TIME_SLOTS.length],
+    };
+  };
+
+  leg1Rounds.forEach((pairings, ri) => {
+    pairings.forEach(({ teamA, teamB }, mi) => {
+      allMatches.push(buildMatch(ri, 1, teamA, teamB, mi));
+    });
+  });
+
+  leg1Rounds.forEach((pairings, ri) => {
+    pairings.forEach(({ teamA, teamB }, mi) => {
+      allMatches.push(buildMatch(ri, 2, teamA, teamB, mi));
+    });
+  });
+
+  return allMatches;
+}
+// ─────────────────────────────────────────────────────────────────────
 router.get("/tournament/:tournamentId", async (req, res) => {
   try {
     const matches = await Match.find({ tournament: req.params.tournamentId })
@@ -37,6 +118,29 @@ router.post("/generate/:tournamentId", adminAuth, async (req, res) => {
         .json({ message: "Need at least 2 approved teams" });
 
     await Match.deleteMany({ tournament: req.params.tournamentId });
+
+    // ── Double Round Robin ───────────────────────────────────────────
+    if (tournament.format === "double_round_robin") {
+      // Auto-assign seeds by registration order
+      for (let i = 0; i < teams.length; i++) {
+        await Team.findByIdAndUpdate(teams[i]._id, {
+          seed: i + 1,
+          wins: 0,
+          losses: 0,
+        });
+      }
+      const matches = generateDRR(teams, tournament);
+      await Match.insertMany(matches);
+      await Tournament.findByIdAndUpdate(req.params.tournamentId, {
+        status: "fixture_generated",
+      });
+      const realMatches = matches.filter((m) => m.status !== "rest").length;
+      return res.json({
+        message: "Double Round Robin fixture generated",
+        matches: matches.length,
+        realMatches,
+      });
+    }
 
     for (let i = 0; i < teams.length; i++) {
       await Team.findByIdAndUpdate(teams[i]._id, {
@@ -78,80 +182,98 @@ router.put("/:id/score", adminAuth, async (req, res) => {
     if (teamAScore) match.teamAScore = teamAScore;
     if (teamBScore) match.teamBScore = teamBScore;
     match.status = status || "completed";
-    if (notes !== undefined) match.notes = notes;
-
+    if (notes !== undefined) match.notes = note
+    
     let tournamentJustCompleted = false;
 
-    if (winnerId && match.status === "completed") {
-      const teamAId = match.teamA?.toString();
-      const teamBId = match.teamB?.toString();
-      if (!teamAId || !teamBId)
-        return res
-          .status(400)
-          .json({ message: "Match does not have two teams yet" });
+if (winnerId && match.status === "completed") {
+  const teamAId = match.teamA?.toString();
+  const teamBId = match.teamB?.toString();
 
-      const loserId = teamAId === winnerId ? teamBId : teamAId;
-      match.winner = winnerId;
-      match.loser = loserId;
+  if (!teamAId || !teamBId)
+    return res
+      .status(400)
+      .json({ message: "Match does not have two teams yet" });
 
-      await Team.findByIdAndUpdate(winnerId, { $inc: { wins: 1 } });
-      await Team.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
+  const loserId = teamAId === winnerId ? teamBId : teamAId;
 
-      if (match.bracketType === "winners") {
-        await Team.findByIdAndUpdate(winnerId, { bracket: "winners" });
-        await Team.findByIdAndUpdate(loserId, { bracket: "losers" });
-      } else if (match.bracketType === "losers") {
-        await Team.findByIdAndUpdate(winnerId, { bracket: "losers" });
-        await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
-      } else if (match.bracketType === "grand_final") {
-        await Team.findByIdAndUpdate(winnerId, { bracket: "champion" });
-        await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
-        tournamentJustCompleted = true;
-      } else if (match.bracketType === "knockout") {
-        // Combination formats: loss = eliminated; only the final deciding match crowns champion
-        await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
-        if (match.decidesChampion) {
-          await Team.findByIdAndUpdate(winnerId, { bracket: "champion" });
-          tournamentJustCompleted = true;
-        }
-      }
-      // bracketType === 'league': no immediate elimination — propagateCombinationResults handles it
+  match.winner = winnerId;
+  match.loser = loserId;
 
-      if (match.nextWinnerMatch) {
-        await fillSlot(match.nextWinnerMatch, match.winner);
-      }
-      if (match.nextLoserMatch) {
-        const nlm = await Match.findById(match.nextLoserMatch);
-        if (nlm) {
-          if (!nlm.teamA) nlm.teamA = loserId;
-          else if (!nlm.teamB) nlm.teamB = loserId;
-          await nlm.save();
-        }
-      }
+  await Team.findByIdAndUpdate(winnerId, { $inc: { wins: 1 } });
+  await Team.findByIdAndUpdate(loserId, { $inc: { losses: 1 } });
+
+  if (match.bracketType === "winners") {
+
+    await Team.findByIdAndUpdate(winnerId, { bracket: "winners" });
+    await Team.findByIdAndUpdate(loserId, { bracket: "losers" });
+
+  } else if (match.bracketType === "losers") {
+
+    await Team.findByIdAndUpdate(winnerId, { bracket: "losers" });
+    await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
+
+  } else if (match.bracketType === "grand_final") {
+
+    await Team.findByIdAndUpdate(winnerId, { bracket: "champion" });
+    await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
+
+    tournamentJustCompleted = true;
+
+  } else if (match.bracketType === "knockout") {
+
+    // Combination tournament knockout stage
+    await Team.findByIdAndUpdate(loserId, { bracket: "eliminated" });
+
+    if (match.decidesChampion) {
+      await Team.findByIdAndUpdate(winnerId, { bracket: "champion" });
+      tournamentJustCompleted = true;
     }
 
-    await match.save();
-    if (tournamentJustCompleted) {
-      await Tournament.findByIdAndUpdate(match.tournament, { status: 'completed' });
-    } else {
-      await Tournament.findByIdAndUpdate(match.tournament, { status: 'ongoing' });
-    }
+  }
 
-    // ── Combination-format propagation ──────────────────────────────────
-    // Fills any matches that source their teams from THIS match's winner
-    // (used by Knockout-cum-League re-pairing), and checks whether THIS
-    // match completes a league/group so the group winner can be pushed
-    // into the next stage.
-    if (match.winner) {
-      await propagateCombinationResults(match);
-    }
+  // bracketType === "league" or "double_round_robin"
+  // No immediate elimination here.
 
-    const updated = await Match.findById(match._id)
-      .populate("teamA", "teamName")
-      .populate("teamB", "teamName")
-      .populate("winner", "teamName")
-      .populate("loser", "teamName");
-    res.json(updated);
+  if (match.nextWinnerMatch) {
+    await fillSlot(match.nextWinnerMatch, match.winner);
+  }
+
+  if (match.nextLoserMatch) {
+    const nlm = await Match.findById(match.nextLoserMatch);
+
+    if (nlm) {
+      if (!nlm.teamA) nlm.teamA = loserId;
+      else if (!nlm.teamB) nlm.teamB = loserId;
+
+      await nlm.save();
+    }
+  }
+}
+await match.save();
+    
+if (tournamentJustCompleted) {
+  await Tournament.findByIdAndUpdate(match.tournament, {
+    status: "completed",
+  });
+} else {
+  await Tournament.findByIdAndUpdate(match.tournament, {
+    status: "ongoing",
+  });
+}
+
+// Handle combination tournament progression
+if (match.winner) {
+  await propagateCombinationResults(match);
+}
+
+const updated = await Match.findById(match._id)
+  .populate("teamA", "teamName")
+  .populate("teamB", "teamName")
+  .populate("winner", "teamName")
+  .populate("loser", "teamName");
+
+res.json(updated);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
@@ -160,14 +282,83 @@ router.put("/:id/score", adminAuth, async (req, res) => {
 
 router.put("/:id", adminAuth, async (req, res) => {
   try {
-    const match = await Match.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    })
-      .populate("teamA", "teamName")
-      .populate("teamB", "teamName");
-    if (!match) return res.status(404).json({ message: "Match not found" });
-    res.json(match);
-  } catch (err) {
+const updateData = { ...req.body };
+
+// Find existing match first
+const existingMatch = await Match.findById(req.params.id);
+if (!existingMatch)
+  return res.status(404).json({ message: "Match not found" });
+
+// Auto set status to completed if winnerName is provided (DRR match)
+if (updateData.winnerName && updateData.winnerName !== "") {
+  updateData.status = "completed";
+
+  if (existingMatch.winnerName !== updateData.winnerName) {
+
+    // Remove old winner/loss counts
+    if (existingMatch.winnerName) {
+      const oldLoser =
+        existingMatch.winnerName === existingMatch.teamAName
+          ? existingMatch.teamBName
+          : existingMatch.teamAName;
+
+      await Team.findOneAndUpdate(
+        {
+          tournament: existingMatch.tournament,
+          teamName: existingMatch.winnerName,
+        },
+        { $inc: { wins: -1 } }
+      );
+
+      await Team.findOneAndUpdate(
+        {
+          tournament: existingMatch.tournament,
+          teamName: oldLoser,
+        },
+        { $inc: { losses: -1 } }
+      );
+    }
+
+    // Add new winner/loss counts
+    const newLoser =
+      updateData.winnerName === existingMatch.teamAName
+        ? existingMatch.teamBName
+        : existingMatch.teamAName;
+
+    await Team.findOneAndUpdate(
+      {
+        tournament: existingMatch.tournament,
+        teamName: updateData.winnerName,
+      },
+      { $inc: { wins: 1 } }
+    );
+
+    await Team.findOneAndUpdate(
+      {
+        tournament: existingMatch.tournament,
+        teamName: newLoser,
+      },
+      { $inc: { losses: 1 } }
+    );
+  }
+}
+
+const updatedMatch = await Match.findByIdAndUpdate(
+  req.params.id,
+  updateData,
+  { new: true }
+)
+  .populate("teamA", "teamName")
+  .populate("teamB", "teamName");
+
+if (updateData.status === "completed") {
+  await Tournament.findByIdAndUpdate(existingMatch.tournament, {
+    status: "ongoing",
+  });
+}
+
+res.json(updatedMatch);
+ catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
@@ -455,6 +646,7 @@ function buildDKO(teams, tournament) {
         (m) => m._id.toString() === match.nextWinnerMatch.toString(),
       );
 
+
       if (next) {
         if (!next.teamA) next.teamA = match.winner;
         else if (!next.teamB) next.teamB = match.winner;
@@ -463,6 +655,7 @@ function buildDKO(teams, tournament) {
   }
 
   // WB Final winner → GF
+
   wbFinalMatch.nextWinnerMatch = gfMatch._id;
 
   // WB Final loser → LB Final

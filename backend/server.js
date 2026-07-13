@@ -15,6 +15,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/teams', require('./routes/teams'));
 app.use('/api/matches', require('./routes/matches'));
+app.use("/api/fixtures", require("./routes/fixtures"));
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/tournament_db';
 

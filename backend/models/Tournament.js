@@ -2,16 +2,23 @@ const mongoose = require('mongoose');
 
 const tournamentSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  sport: { type: String, required: true, enum: ['cricket', 'football', 'basketball', 'badminton', 'tennis', 'volleyball', 'other'] },
-  format: { type: String, 
-  enum: [
-    'single_knockout', 
-    'double_knockout',
-    'knockout_cum_league', 
-    'league_cum_knockout',
-    'knockout_cum_knockout'
-  ], default: 'single_knockout' },
-  
+  sport: {
+    type: String,
+    required: true,
+    enum: ['cricket', 'football', 'basketball', 'badminton', 'tennis', 'volleyball', 'other']
+  },
+  format: {
+    type: String,
+    enum: [
+      'single_knockout',
+      'double_knockout',
+      'double_round_robin',
+      'knockout_cum_league',
+      'league_cum_knockout',
+      'knockout_cum_knockout'
+    ],
+    default: 'single_knockout'
+  },
   maxTeams: { type: Number, required: true },
   playersPerTeam: { type: Number, required: true },
   venue: { type: String, required: true },
@@ -21,7 +28,14 @@ const tournamentSchema = new mongoose.Schema({
   description: { type: String },
   status: {
     type: String,
-    enum: ['upcoming', 'registration_open', 'registration_closed', 'fixture_generated', 'ongoing', 'completed'],
+    enum: [
+      'upcoming',
+      'registration_open',
+      'registration_closed',
+      'fixture_generated',
+      'ongoing',
+      'completed'
+    ],
     default: 'registration_open'
   },
   registrationDeadline: { type: Date },
