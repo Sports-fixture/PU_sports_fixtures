@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { tournamentAPI, teamAPI, matchAPI } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import { formatLabel } from "../utils/formats";
+import Tournaments from "./Tournaments";
+
 
 const sportEmoji = {
   cricket: "🏏",
@@ -14,6 +16,7 @@ const sportEmoji = {
   other: "🏅",
 };
 
+const legColor = match.leg === 1 ? "#2B4C8C" : "#C8963E";
 
 const bracketColors = {
   winners: "#f59e0b",
@@ -52,7 +55,11 @@ const DRRPublicView = ({ matches }) => {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-=======
+          }}
+          >
+          </div>
+      )
+  }
 const statusBadge = (status) => {
   const map = {
     registration_open: ["badge-green", "Registration Open"],
@@ -65,7 +72,7 @@ const statusBadge = (status) => {
   const [cls, label] = map[status] || ["badge-gray", status];
   return <span className={`badge ${cls}`}>{label}</span>;
 };
-
+}
 // ── Points Table calculator ──────────────────────────────────────────
 const buildPointsTable = (teams, matches) => {
   const completed = matches.filter(
@@ -404,32 +411,21 @@ const LiveMatchCard = ({ match }) => {
             gap: 6,
           }}
         >
-          <span
-            style={{
+         <span
+  style={{
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: "#fff",
+    display: "inline-block",
+    animation: "pulse 1s infinite",
+  }}
+></span>
 
-              fontWeight: 600,
-              color: "var(--text-secondary)",
-              fontSize: "0.85rem",
-            }}
-          >
-            {match.teamAName === "BYE" ? match.teamBName : match.teamAName}
-          </span>
-          <span className="badge badge-blue" style={{ fontSize: "0.62rem" }}>
-            Rest Round
-          </span>
-        </div>
-      );
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#fff",
-              display: "inline-block",
-              animation: "pulse 1s infinite",
-            }}
-          ></span>
-          LIVE · {match.roundName}
-        </span>
-        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>
+LIVE · {match.roundName}
+</span>
+        <span 
+        style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.72rem" }}>
           M{match.matchNumber}
         </span>
       </div>
@@ -866,14 +862,6 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
               {match.winnerName === match.teamBName && "🏆 "}
               {match.teamBName}
             </span>
-
-            fontSize: "0.65rem",
-            color: "var(--text-muted)",
-            marginBottom: 6,
-            display: "flex",
-            gap: 6,
-          }}
-        >
           <span
             style={{
               background: "var(--bg-secondary)",
@@ -955,8 +943,9 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
           </span>
         </div>
       </div>
-    );
-  };
+  </div>
+  )}
+
   const RoundCol = ({ label, matches, color }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div
@@ -980,6 +969,7 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
       ))}
     </div>
   );
+
   const wbG = groupByRound(winnerMatches),
     lbG = groupByRound(loserMatches);
   const WB = "#C8963E",
@@ -995,50 +985,43 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
         <span className="badge badge-navy">🏆 Grand Final</span>
       </div>
       {wbG.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <div
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              color: WB,
-              marginBottom: 12,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}
-          >
-            🥇 Winners Bracket
-          </div>
-          <div
-            style={{
-              display: "flex",
+  <div style={{ marginBottom: 32 }}>
+    <div
+      style={{
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        color: WB,
+        marginBottom: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+      }}
+    >
+      🥇 Winners Bracket
+    </div>
 
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {match.scheduledDate && (
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                📅 {new Date(match.scheduledDate).toLocaleDateString("en-IN")}
-                {match.time && ` · ${match.time}`}
-              </span>
-            )}
-            {match.venue && (
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                📍 {match.venue}
-              </span>
-            )}
-            <span
-              className={`badge ${match.status === "completed" ? "badge-green" : match.status === "live" ? "badge-live" : "badge-gray"}`}
-              style={{ fontSize: "0.62rem" }}
-            >
-              {match.status}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        flexWrap: "wrap",
+      }}
+    >
+      {wbG.map(([round, matches]) => (
+        <RoundCol
+          key={round}
+          label={`Round ${round}`}
+          matches={matches}
+          color={WB}
+        />
+      ))}
+    </div>
+  </div>
+)}
+ </div>
+);
+
+
   const Section = ({ matches: list, color, title }) => (
     <div style={{ marginBottom: 28 }}>
       <div
@@ -1063,7 +1046,7 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
             ))}
           </div>
         </div>
-      )}
+      )
       {lbG.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <div
@@ -1118,22 +1101,24 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches }) => {
           </div>
         </div>
       )}
-    </div>
-  );
-};
 
 // ── Group Card: show which teams are in a group (KO-cum-KO / League-cum-KO) ──
 const GroupTeamsCard = ({ groupName, teams, matches, color }) => {
   const groupMatches = matches.filter((m) => m.groupName === groupName);
+
   const teamIds = new Set();
+
   groupMatches.forEach((m) => {
     if (m.teamA?._id) teamIds.add(m.teamA._id.toString());
     if (m.teamB?._id) teamIds.add(m.teamB._id.toString());
   });
+
   const groupTeams = teams.filter((t) =>
-    teamIds.has(t._id?.toString() || t._id),
+    teamIds.has((t._id || "").toString())
   );
+
   if (!groupTeams.length) return null;
+
   return (
     <div
       style={{
@@ -1155,73 +1140,9 @@ const GroupTeamsCard = ({ groupName, teams, matches, color }) => {
           letterSpacing: "0.08em",
         }}
       >
-
-        {title}
-      </div>
-      {groupByRound(list).map(([round, rms]) => (
-        <div key={round} style={{ marginBottom: 14 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 8,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "monospace",
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--gold)",
-                background: "var(--gold-bg)",
-                padding: "2px 8px",
-                borderRadius: 5,
-                border: "1px solid #E8C07A",
-              }}
-            >
-              ROUND {String(round).padStart(2, "0")}
-            </span>
-            <div
-              style={{ flex: 1, height: 1, background: "var(--border-light)" }}
-            />
-          </div>
-          {rms.map((m) => (
-            <Card key={m._id} match={m} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-  return (
-    <div>
-      <div
-        style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}
-      >
-        <span className="badge badge-blue">🔵 Leg 1 — First Fixtures</span>
-        <span className="badge badge-gold">🟡 Leg 2 — Return Fixtures</span>
-      </div>
-      {leg1.length > 0 && (
-        <Section
-          matches={leg1}
-          color="#2B4C8C"
-          title="🔵 Leg 1 — First Fixtures"
-        />
-      )}
-      {leg2.length > 0 && (
-        <Section
-          matches={leg2}
-          color="#C8963E"
-          title="🟡 Leg 2 — Return Fixtures"
-        />
-      )}
-    </div>
-  );
-};
-// ────────────────────────────────────────────────────────────────────
-
         {groupName}
       </div>
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {groupTeams.map((t) => (
           <div
@@ -1237,11 +1158,18 @@ const GroupTeamsCard = ({ groupName, teams, matches, color }) => {
             }}
           >
             {t.bracket === "champion" && <span>🏆</span>}
+
             <span style={{ fontWeight: 600, color: "var(--navy)" }}>
               {t.teamName}
             </span>
+
             {t.seed > 0 && (
-              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+              <span
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                }}
+              >
                 #{t.seed}
               </span>
             )}
@@ -1251,7 +1179,6 @@ const GroupTeamsCard = ({ groupName, teams, matches, color }) => {
     </div>
   );
 };
-
 // ── Champion Banner ───────────────────────────────────────────────────
 const ChampionBanner = ({ teams }) => {
   const champion = teams.find((t) => t.bracket === "champion");
@@ -1311,6 +1238,7 @@ const ChampionBanner = ({ teams }) => {
     </div>
   );
 };
+
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -1503,7 +1431,6 @@ const tabs = [
             { id: "bracket", label: "🏆 Bracket" },
           ]),
 ];
-
   return (
     <div className="page-container page-wrapper fade-in">
       {/* Header */}
@@ -1621,7 +1548,6 @@ const tabs = [
     {tournament.status?.replace(/_/g, " ").toUpperCase()}
   </span>
 </div>
-                </span>
                 {statusBadge(tournament.status)}
                 <span className="badge badge-blue">
                   {formatLabel(tournament.format)}
@@ -1672,6 +1598,7 @@ const tabs = [
 </div>
         </div>
       </div>
+  )
 
       {/* Champion Banner — shown whenever tournament is completed and a champion exists */}
       {tournament.status === "completed" && (
@@ -1690,13 +1617,11 @@ const tabs = [
     </button>
   ))}
 </div>
-          </button>
-        ))}
-      </div>
+     
 
       {/* OVERVIEW */}
       {activeTab === "overview" && (
-<<<<<div className="fade-in">
+  <div className="fade-in">
   {/* Live Matches */}
   {liveMatches.length > 0 && (
     <div style={{ marginBottom: 32 }}>
@@ -1816,14 +1741,7 @@ const tabs = [
         ))}
       </div>
     </div>
-
-    {/* Keep the second overview card that already follows in your code */}
-  </div>
-</div>
-              ))}
-            </div>
-          )}
-          <div className="grid-4" style={{ marginBottom: 32 }}>
+    <div className="grid-4" style={{ marginBottom: 32 }}>
             {[
               {
                 label: "Sport",
@@ -2184,6 +2102,12 @@ const tabs = [
                       ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       {/* SCORES TAB */}
       {activeTab === "scores" && (
         <div className="fade-in">
@@ -2239,14 +2163,103 @@ const tabs = [
       )}
 
 
-      {/* FIXTURES */}
-      {activeTab === "fixtures" && (
-        <div style={{ marginBottom: 40 }}>
-          {matches.length === 0 ? (
-            <div className="empty-state card">
-              <div className="empty-state-icon">📅</div>
-              <div className="empty-state-title">No fixtures generated yet</div>
-              <div className="empty-state-desc">
+{/* FIXTURES */}
+{activeTab === "fixtures" && (
+  <div style={{ marginBottom: 40 }}>
+    {matches.length === 0 ? (
+      <div className="empty-state card">
+        <div className="empty-state-icon">📅</div>
+        <div className="empty-state-title">No fixtures generated yet</div>
+
+        <div className="empty-state-desc">
+          Generate fixtures to view the complete match schedule.
+        </div>
+      </div>
+    ) : (
+      <>
+        {/* Group cards (League Cum Knockout) */}
+        {tournament.format === "league_cum_knockout" &&
+          groupNames.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              {groupNames.map((groupName, index) => (
+                <GroupTeamsCard
+                  key={groupName}
+                  groupName={groupName}
+                  teams={teams}
+                  matches={matches}
+                  color={
+                    ["#2B4C8C", "#C8963E", "#2E8B57", "#B23A48"][
+                      index % 4
+                    ]
+                  }
+                />
+              ))}
+            </div>
+          )}
+
+        {/* Double Round Robin */}
+        {matches.some(
+          (m) => m.bracketType === "double_round_robin"
+        ) ? (
+          <DRRFixtures matches={matches} />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            {groupByRound(matches).map(([round, roundMatches]) => (
+              <div key={round} className="card">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 16,
+                  }}
+                >
+                  <span
+                    className="badge badge-gold"
+                    style={{
+                      fontFamily: "JetBrains Mono",
+                    }}
+                  >
+                    ROUND {String(round).padStart(2, "0")}
+                  </span>
+
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      background: "var(--border-light)",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  {roundMatches.map((match) => (
+                    <Card
+                      key={match._id}
+                      match={match}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    )}
+  </div>
+)}
       {/* POINTS TABLE TAB */}
       {activeTab === "points" && (
         <div className="fade-in">
@@ -2791,10 +2804,6 @@ const tabs = [
     )}
   </div>
 )}
-          )}
-        </div>
-      )}
-
       {/* TEAMS TAB */}
       {activeTab === "teams" && (
         <div className="fade-in">
@@ -3155,10 +3164,6 @@ const tabs = [
           </div>
         </div>
       )}
-    </div>
-  );
-};
-
 
 // Single match card for fixtures tab
 const MatchCard = ({ match, color }) => (
@@ -3694,7 +3699,9 @@ const BracketView = ({ winnerMatches, loserMatches, finalMatches, format }) => {
         </div>
       )}
     </div>
-  );
+);
 };
+}
+}
 
 export default TournamentDetail;

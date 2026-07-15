@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { tournamentAPI, teamAPI, matchAPI } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import { FORMAT_GROUPS, formatLabel } from "../utils/formats";
+import TournamentDetail from "./TournamentDetail";
 
 const sports = [
   "cricket",
@@ -377,7 +378,7 @@ const AdminDashboard = () => {
       setTForm({
         name: "",
         sport: "cricket",
-        format: "double_knockout",
+        format: "single_knockout",
         maxTeams: 8,
         playersPerTeam: 11,
         venue: "",
@@ -408,7 +409,7 @@ const AdminDashboard = () => {
   const handleGenerateFixture = async (tId) => {
 const t = tournaments.find((t) => t._id === tId);
 
-const formatLabel =
+const formatName =
   t?.format === "single_knockout"
     ? "Single Knockout"
     : t?.format === "double_round_robin"
@@ -419,7 +420,7 @@ const formatLabel =
 
 if (
   !window.confirm(
-    `Generate ${formatLabel} fixture? This will delete existing matches.`
+    `Generate ${formatName} fixture? This will delete existing matches.`
   )
 )
   return;
@@ -571,6 +572,8 @@ try {
         }}
       >
         <div>
+        {/*change */}
+        </div> 
           <div
             style={{
               fontSize: "0.72rem",
@@ -604,7 +607,7 @@ try {
           + Create Tournament
         </button>
       </div>
-
+  )
       {/* Flash messages */}
       {msg && <div className="alert alert-success">{msg}</div>}
       {error && (
@@ -1267,7 +1270,6 @@ try {
               </button>
             </div>
           ) : (
-            <>
               <div
                 style={{
                   display: "flex",
@@ -1317,7 +1319,8 @@ try {
                   </button>
                 </div>
               </div>
-
+          )}
+        )
               {matches.length === 0 ? (
                 <div
                   className="card"
@@ -1340,7 +1343,7 @@ try {
                   </p>
                 </div>
               ) : (
-                <>
+                <div>
 {/* Progress summary */}
 <div
   style={{
@@ -1408,6 +1411,8 @@ try {
     </div>
   ))}
 </div>
+</div>
+)}
 
 {/* Double Round Robin */}
 {matches.some((m) => m.bracketType === "double_round_robin") ? (
@@ -1464,490 +1469,171 @@ try {
     )}
 
     {/* Match Sections */}
-    {(() => {
-      const isCombination = matches.some(
-        (m) =>
-          m.bracketType === "knockout" ||
-          m.bracketType === "league",
-      );
-
-      let sections;
-
-      if (!isCombination) {
-        sections = [
-          {
-            label: "🥇 Winners Bracket",
-            type: "winners",
-            color: "var(--accent-gold)",
-          },
-          {
-            label: "🔁 Losers Bracket",
-            type: "losers",
-            color: "var(--accent-blue)",
-          },
-          {
-            label: "🏆 Grand Final",
-            type: "grand_final",
-            color: "var(--accent-purple)",
-          },
-        ];
-      } else {
-        sections = [
-          {
-            label: "🥊 Stage 1",
-            type: "league",
-            color: "var(--navy)",
-          },
-          {
-            label: "🏆 Stage 2",
-            type: "knockout",
-            color: "var(--accent-gold)",
-          },
-        ];
-      }
-
-      return sections.map((section) => {
-        // keep your existing rendering code here
-      });
-    })()}
-  </>
-)}
-                          cls: "badge-gold",
-                        },
-                        {
-                          label: "🔁 Losers Bracket",
-                          type: "losers",
-                          color: "var(--accent-blue)",
-                          cls: "badge-blue",
-                        },
-                        {
-                          label: "🏆 Grand Final",
-                          type: "grand_final",
-color: "var(--navy)",
-cls: "badge-navy",
-},
-].map((s) => ({
-  ...s,
-  section: matches.filter(
-    (m) => m.bracketType === s.type,
-  ),
-}));
-
-} else {
-  const groups = {};
-  const keyOrder = [];
-
-  matches.forEach((m) => {
-    const key = `${m.stage}|${m.groupName || ""}`;
-
-    if (!groups[key]) {
-      groups[key] = [];
-      keyOrder.push(key);
-    }
-
-    groups[key].push(m);
-  });
-
-  keyOrder.sort(
-    (a, b) =>
-      Number(a.split("|")[0]) - Number(b.split("|")[0]),
+    // ...existing code...
+{/* Match Sections */}
+{(() => {
+  const isCombination = matches.some(
+    (m) => m.bracketType === "knockout" || m.bracketType === "league",
   );
 
-  sections = keyOrder.map((key) => {
-    const [stage, groupName] = key.split("|");
-    const section = groups[key];
+  let sections = [];
 
-    const stageLabel =
-      section[0]?.stageLabel ||
-      (stage === "1" ? "Stage 1" : "Stage 2");
+  if (!isCombination) {
+    sections = [
+      {
+        label: "🥇 Winners Bracket",
+        type: "winners",
+        color: "var(--accent-gold)",
+        cls: "badge-gold",
+      },
+      {
+        label: "🔁 Losers Bracket",
+        type: "losers",
+        color: "var(--accent-blue)",
+        cls: "badge-blue",
+      },
+      {
+        label: "🏆 Grand Final",
+        type: "grand_final",
+        color: "var(--navy)",
+        cls: "badge-navy",
+      },
+    ].map((s) => ({
+      ...s,
+      section: matches.filter((m) => m.bracketType === s.type),
+    }));
+  } else {
+    const groups = {};
+    const keyOrder = [];
 
-    const label = groupName
-      ? `🥊 ${groupName} — ${stageLabel}`
-      : `${stage === "2" ? "🏆" : "🥊"} ${stageLabel}`;
+    matches.forEach((m) => {
+      const key = `${m.stage}|${m.groupName || ""}`;
+      if (!groups[key]) {
+        groups[key] = [];
+        keyOrder.push(key);
+      }
+      groups[key].push(m);
+    });
 
-    return {
-      label,
-      type: key,
-      color: stage === "2" ? "var(--navy)" : "var(--royal)",
-      cls: stage === "2" ? "badge-navy" : "badge-blue",
-      section,
-    };
-  });
-}
+    keyOrder.sort((a, b) => Number(a.split("|")[0]) - Number(b.split("|")[0]));
 
-return sections.map(
-  ({ label, type, color, cls, section }) => {
+    sections = keyOrder.map((key) => {
+      const [stage, groupName] = key.split("|");
+      const section = groups[key];
+      const stageLabel =
+        section[0]?.stageLabel || (stage === "1" ? "Stage 1" : "Stage 2");
+
+      const label = groupName
+        ? `🥊 ${groupName} — ${stageLabel}`
+        : `${stage === "2" ? "🏆" : "🥊"} ${stageLabel}`;
+
+      return {
+        label,
+        type: key,
+        color: stage === "2" ? "var(--navy)" : "var(--royal)",
+        cls: stage === "2" ? "badge-navy" : "badge-blue",
+        section,
+      };
+    });
+  }
+
+  return sections.map(({ label, type, color, cls, section }) => {
     if (!section.length) return null;
 
     const done = section.filter(
-      (m) =>
-        m.status === "completed" ||
-        m.status === "bye",
+      (m) => m.status === "completed" || m.status === "bye",
     ).length;
-                        return (
-                          <div key={type} style={{ marginBottom: 28 }}>
-                            <div
-                              style={{
-style={{
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginBottom: 12,
-}}
->
-  <span
-    style={{
-      fontSize: "0.82rem",
-      fontWeight: 700,
-      color,
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-    }}
-  >
-    {label}
-  </span>
 
-  <span
-    style={{
-      fontSize: "0.72rem",
-      color: "var(--text-muted)",
-      background: "var(--bg-secondary)",
-      padding: "2px 8px",
-      borderRadius: 10,
-      fontWeight: 600,
-    }}
-  >
-    {done}/{section.length} done
-  </span>
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                flexDirection: "column",
-gap: 10,
-}}
->
-  {section.map((match) => {
-    const hasBothTeams = match.teamA && match.teamB;
+    return (
+      <div key={type} style={{ marginBottom: 28 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              color,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            {label}
+          </span>
 
-    const isReady =
-      hasBothTeams &&
-                                  match.status !== "completed" &&
-                                  match.status !== "bye";
-                                const isDone =
-                                  match.status === "completed" ||
-                                  match.status === "bye";
-const isLive = match.status === "live";
-
-return (
-  <div
-    key={match._id}
-    className="card"
-    style={{
-      background: isLive
-        ? "var(--red-bg)"
-        : isReady
-          ? "var(--blue-light)"
-          : isDone
-            ? "var(--bg-primary)"
-            : "var(--bg-card)",
-      border: `1px solid ${
-        isLive
-          ? "var(--red)"
-          : isReady
-            ? "var(--blue-accent)"
-            : "var(--border)"
-      }`,
-      borderLeft: `4px solid ${
-        isLive
-          ? "var(--red)"
-          : isReady
-            ? color
-            : isDone
-              ? "var(--border)"
-              : "var(--border-light)"
-      }`,
-      borderRadius: 10,
-      padding: "16px 20px",
-      transition: "all 0.2s",
-      opacity: isDone && !isLive ? 0.8 : 1,
-    }}
-  >
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        gap: 12,
-                                        flexWrap: "wrap",
-                                      }}
-                                    >
-                                      <div style={{ flex: 1 }}>
-
-                                        {/* Match header */}
-                                        <div
-                                          style={{
-                                            display: "flex",
-                                            gap: 8,
-
-                                            marginBottom: 12,
-                                            flexWrap: "wrap",
-                                            alignItems: "center",
-                                          }}
-                                        >
-                                          <span
-                                            style={{
-                                              fontFamily: "monospace",
-                                              fontSize: "0.72rem",
-                                              color: "var(--text-muted)",
-                                              background: "var(--bg-secondary)",
-                                              padding: "2px 8px",
-                                              borderRadius: 4,
-                                              fontWeight: 700,
-                                            }}
-                                          >
-                                            M{match.matchNumber}
-                                          </span>
-                                          <span
-                                            className={`badge ${cls}`
-                                            style={{ fontSize: "0.65rem" }}
-                                          >
-                                            {match.roundName}
-                                          </span>
-                                          <span
-className={`badge ${
-  isDone
-    ? (match.isBye ? "badge-blue" : "badge-green")
-    : isLive
-      ? "badge-live"
-      : isReady
-        ? "badge-blue"
-        : "badge-gray"
-}`}
-style={{ fontSize: "0.65rem" }}
-                                          >
-                                            {match.isBye
-                                              ? "BYE"
-                                              : isDone
-? "COMPLETED"
-: isLive
-  ? "● LIVE"
-  : isReady
-    ? "▶ READY"
-    : "⏳ WAITING"}
-</span>
-</div>
-
-{/* Match content */}
-                                        {match.isBye ? (
-                                          <div
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: 10,
-                                            }}
-                                          >
-                                            <span
-                                              style={{
-                                                fontWeight: 700,
-
-                                                color: "var(--navy)",
-                                                fontSize: "0.95rem",
-                                              }}
-                                            >
-                                              {match.teamA?.teamName || "TBD"}
-                                            </span>
-                                            <span
-              className="badge badge-blue"
-style={{ fontSize: "0.65rem" }}
->
-  → Auto Advances (BYE)
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <div
-                                            style={{
-                                              display: "grid",
-                                              gridTemplateColumns:
-                                                "1fr auto 1fr",
-                                              alignItems: "center",
-
-                                              gap: 12,
-                                            }}
-                                          >
-                                            <div>
-                                              <div
-                                                style={{
-                                                  fontWeight:
-                                                    match.winner?._id ===
-                                                    match.teamA?._id
-                                                      ? 800
-                                                      : 500,
-                                                  color:
-                                                    match.winner?._id ===
-                                                    match.teamA?._id
-                                                      ? color
-                                                      : match.teamA
-
-                                                        ? "var(--navy)"
-                                                        : "var(--text-muted)",
-                                                  fontSize: "0.95rem",
-                                                  fontStyle: match.teamA
-                                                    ? "normal"
-                                                    : "italic",
-                                                }}
-                                              >
-                                                {match.winner?._id ===
-                                                  match.teamA?._id && "🏆 "}
-                                                {match.teamA?.teamName ||
-"TBD — waiting for result"}
-</div>
-
-{match.teamAScore?.runs > 0 && (
-  <div
-    style={{
-      fontFamily: "JetBrains Mono",
-      fontSize: "0.82rem",
-      color,
-      marginTop: 2,
-    }}
-  >
-    {match.teamAScore.runs}/
-    {match.teamAScore.wickets} (
-    {match.teamAScore.overs} ov)
-  </div>
-)}
-</div>
-
-{/* VS */}
-                                            <div
-                                              style={{
-                                                textAlign: "center",
-                                                color: "var(--text-muted)",
-                                                fontWeight: 700,
-
-                                                fontSize: "0.75rem",
-                                                padding: "5px 12px",
-
-                                                background:
-                                                  "var(--bg-secondary)",
-                                                borderRadius: 6,
-                                              }}
-                                            >
-                                              VS
-                                            </div>
-{/* Team B */}
-<div style={{ textAlign: "right" }}>
-  <div
-    style={{
-      fontWeight:
-        match.winner?._id === match.teamB?._id ? 800 : 500,
-      color:
-        match.winner?._id === match.teamB?._id
-          ? color
-          : match.teamB
-            ? "var(--text-primary)"
-            : "var(--text-muted)",
-      fontSize: "0.95rem",
-      fontStyle: match.teamB ? "normal" : "italic",
-    }}
-  >
-    {match.winner?._id === match.teamB?._id && "🏆 "}
-    {match.teamB?.teamName || "TBD — waiting for result"}
-  </div>
-
-  {match.teamBScore?.runs > 0 && (
-    <div
-      style={{
-        fontFamily: "JetBrains Mono",
-        fontSize: "0.82rem",
-        color: "var(--accent-blue)",
-        marginTop: 2,
-      }}
-    >
-      {match.teamBScore.runs}/{match.teamBScore.wickets} (
-      {match.teamBScore.overs} ov)
-    </div>
-  )}
-</div>
-</div>
-)}
-
-{/* Winner line */}
-{match.winner && (
-  <div
-    style={{
-      marginTop: 10,
-      fontSize: "0.78rem",
-      display: "flex",
-      gap: 16,
-      flexWrap: "wrap",
-    }}
-  >
-    <span style={{ color: "var(--accent-green)" }}>
-      🏆 Winner → next match:{" "}
-      <strong>{match.winner.teamName}</strong>
-    </span>
-
-    {match.loser && (
-      <span style={{ color: "var(--accent-red)" }}>
-        ⬇️{" "}
-        <strong>{match.loser.teamName}</strong>{" "}
-        →
-        {match.bracketType === "winners"
-          ? " Losers Bracket"
-          : " Eliminated"}
-      </span>
-    )}
-  </div>
-)}
-</div>
-
-{/* Action */}
-{!match.isBye && hasBothTeams && (
-  <button
-    className={`btn btn-sm ${
-      isDone ? "btn-secondary" : "btn-primary"
-    }`}
-    onClick={() => openScoreModal(match)}
-  >
-    {isDone ? "✏️ Edit Score" : "📊 Enter Score"}
-  </button>
-)}
-
-{!match.isBye && !hasBothTeams && (
-  <span
-    style={{
-      fontSize: "0.75rem",
-      color: "var(--text-muted)",
-      padding: "6px 12px",
-      background: "var(--bg-secondary)",
-      borderRadius: 8,
-    }}
-  >
-    ⏳ Awaiting teams
-  </span>
-)}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-
-                      },
-                    );
-                  })()}
-                </>
-              )}
-            </>
-          )}
+          <span
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--text-muted)",
+              background: "var(--bg-secondary)",
+              padding: "2px 8px",
+              borderRadius: 10,
+              fontWeight: 600,
+            }}
+          >
+            {done}/{section.length} done
+          </span>
         </div>
-      )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {section.map((match) => {
+            const hasBothTeams = Boolean(match.teamA && match.teamB);
+            const isReady =
+              hasBothTeams &&
+              match.status !== "completed" &&
+              match.status !== "bye";
+            const isDone = match.status === "completed" || match.status === "bye";
+            const isLive = match.status === "live";
+
+            return (
+              <div
+                key={match._id}
+                className="card"
+                style={{
+                  background: isLive
+                    ? "var(--red-bg)"
+                    : isReady
+                      ? "var(--blue-light)"
+                      : isDone
+                        ? "var(--bg-primary)"
+                        : "var(--bg-card)",
+                  border: `1px solid ${
+                    isLive
+                      ? "var(--red)"
+                      : isReady
+                        ? "var(--blue-accent)"
+                        : "var(--border)"
+                  }`,
+                  borderLeft: `4px solid ${
+                    isLive
+                      ? "var(--red)"
+                      : isReady
+                        ? color
+                        : isDone
+                          ? "var(--border)"
+                          : "var(--border-light)"
+                  }`,
+                  borderRadius: 10,
+                  padding: "16px 20px",
+                  opacity: isDone && !isLive ? 0.8 : 1,
+                }}
+              >
+                {/* keep your existing match card body here */}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  });
+})()}
+</>
+)}
 
       {/* ── CREATE TOURNAMENT MODAL ── */}
       {showTModal && (
@@ -2006,7 +1692,7 @@ style={{ fontSize: "0.65rem" }}
                     required
                   />
                 </div>
-              </div> */}
+              </div> 
 
               <div className="grid-2">
                 <div className="form-group">
@@ -2676,5 +2362,5 @@ style={{ fontSize: "0.65rem" }}
     </div>
   );
 };
-
+}
 export default AdminDashboard;

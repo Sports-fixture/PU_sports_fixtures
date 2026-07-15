@@ -358,7 +358,8 @@ if (updateData.status === "completed") {
 }
 
 res.json(updatedMatch);
- catch (err) {
+}
+ catch(err) {
     res.status(500).json({ message: err.message });
   }
 });
